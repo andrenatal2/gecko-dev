@@ -31,3 +31,15 @@ endif
 
 DeprecatedPremultiplyTables.h: $(srcdir)/genTables.py
 	$(PYTHON) $(srcdir)/genTables.py
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+ifdef HAVE_64BIT_OS
+libs::
+	cp -fp "$(srcdir)/libovr64.dll" "$(DIST)/bin"
+endif
+endif
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
+libs::
+	cp -fp "$(srcdir)/libovr.dylib" "$(DIST)/bin"
+endif
