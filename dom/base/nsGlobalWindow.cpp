@@ -197,6 +197,8 @@
 #include "mozilla/dom/GamepadService.h"
 #endif
 
+#include "mozilla/dom/VRDeviceService.h"
+
 #include "nsRefreshDriver.h"
 
 #include "mozilla/dom/SelectionChangeEvent.h"
@@ -13309,7 +13311,20 @@ nsGlobalWindow::SyncGamepadState()
     mGamepads.EnumerateRead(EnumGamepadsForSync, nullptr);
   }
 }
-#endif
+#endif // MOZ_GAMEPAD
+
+mozilla::dom::VRDeviceService*
+nsGlobalWindow::GetVRDeviceService()
+{
+  FORWARD_TO_INNER(GetVRDeviceService, (), nullptr);
+
+  if (!mVRDeviceService) {
+    mVRDeviceService = VRDeviceService::Create();
+  }
+
+  return mVRDeviceService;
+}
+
 // nsGlobalChromeWindow implementation
 
 NS_IMPL_CYCLE_COLLECTION_CLASS(nsGlobalChromeWindow)

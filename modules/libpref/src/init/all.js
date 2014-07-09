@@ -2060,7 +2060,7 @@ pref("layout.display-list.dump", false);
 // heavily loaded.
 pref("layout.frame_rate.precise", false);
 
-// pref to control whether layout warnings that are hit quite often are enabled 
+// pref to control whether layout warnings that are hit quite often are enabled
 pref("layout.spammy_warnings.enabled", true);
 
 // Is support for the Web Animations API enabled?
@@ -4214,4 +4214,10 @@ pref("dom.fetch.enabled", false);
 // supported will be disabled. This threshold can be adjusted to suit other
 // platforms; and set to 0 to disable the low-memory check altogether.
 pref("camera.control.low_memory_thresholdMB", 404);
+#endif
+
+#ifdef RELEASE_BUILD
+pref("dom.vr.enabled", false);
+#else
+pref("dom.vr.enabled", true);
 #endif
