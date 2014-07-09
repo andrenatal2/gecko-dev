@@ -135,6 +135,7 @@
 #include "nsISupportsImpl.h"
 #include "mozilla/dom/DocumentFragment.h"
 #include "mozilla/IntegerPrintfMacros.h"
+#include "mozilla/dom/VRDevice.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;
@@ -2829,7 +2830,7 @@ GetFullScreenError(nsIDocument* aDoc)
 }
 
 void
-Element::MozRequestFullScreen()
+Element::MozRequestFullScreen(const RequestFullscreenOptions& aOptions)
 {
   // Only grant full-screen requests if this is called from inside a trusted
   // event handler (i.e. inside an event handler for a user initiated event).
@@ -2853,7 +2854,14 @@ Element::MozRequestFullScreen()
     return;
   }
 
-  OwnerDoc()->AsyncRequestFullScreen(this);
+  FullScreenOptions opts;
+  if (aOptions.mVrDisplay.WasPassed() &&
+      aOptions.mVrDisplay.Value())
+  {
+    opts.mVRHMDDevice = aOptions.mVrDisplay.Value()->GetHMD();
+  }
+
+  OwnerDoc()->AsyncRequestFullScreen(this, opts);
 
   return;
 }
