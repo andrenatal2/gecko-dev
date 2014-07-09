@@ -19,6 +19,7 @@
 #include "nsISupportsImpl.h"            // for MOZ_COUNT_CTOR, etc
 #include "nsPoint.h"                    // for nsIntPoint
 #include "nsString.h"                   // for nsAutoCString
+#include "gfxVR.h"
 
 namespace mozilla {
 namespace layers {
@@ -73,6 +74,12 @@ CanvasLayerComposite::GetRenderState()
 
 void
 CanvasLayerComposite::RenderLayer(const nsIntRect& aClipRect)
+{
+  RenderLayer(aClipRect, nullptr);
+}
+
+void
+CanvasLayerComposite::RenderLayer(const nsIntRect& aClipRect, vr::HMDInfo* aHMD)
 {
   if (!mImageHost || !mImageHost->IsAttached()) {
     return;
