@@ -168,8 +168,13 @@ ParseGLVersion(GLContext* gl, unsigned int* version)
         GLint majorVersion = 0;
         GLint minorVersion = 0;
 
+#ifndef XP_MACOSX
+        // on OSX, these aren't valid unless we get a Core context;
+        // right now we have a Legacy context.  Skip doing this
+        // because it causes a crash with MOZ_GL_DEBUG_ABORT_ON_ERROR.
         gl->fGetIntegerv(LOCAL_GL_MAJOR_VERSION, &majorVersion);
         gl->fGetIntegerv(LOCAL_GL_MINOR_VERSION, &minorVersion);
+#endif
 
         // If it's not an OpenGL (ES) 3.0 context, we will have an error
         error = gl->fGetError();

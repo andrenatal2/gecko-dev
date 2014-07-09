@@ -1699,10 +1699,14 @@ WebGLContext::InitAndValidateGL()
             //   mGLMaxVaryingVectors = min (GL_MAX_VERTEX_OUTPUT_COMPONENTS, GL_MAX_FRAGMENT_INPUT_COMPONENTS) / 4
             GLint maxVertexOutputComponents,
                   minFragmentInputComponents;
-            gl->fGetIntegerv(LOCAL_GL_MAX_VERTEX_OUTPUT_COMPONENTS, &maxVertexOutputComponents);
-            gl->fGetIntegerv(LOCAL_GL_MAX_FRAGMENT_INPUT_COMPONENTS, &minFragmentInputComponents);
+            if (gl->Version() >= 320) {
+                gl->fGetIntegerv(LOCAL_GL_MAX_VERTEX_OUTPUT_COMPONENTS, &maxVertexOutputComponents);
+                gl->fGetIntegerv(LOCAL_GL_MAX_FRAGMENT_INPUT_COMPONENTS, &minFragmentInputComponents);
+                error = gl->GetAndClearError();
+            } else {
+                error = LOCAL_GL_INVALID_ENUM;
+            }
 
-            error = gl->GetAndClearError();
             switch (error) {
                 case LOCAL_GL_NO_ERROR:
                     mGLMaxVaryingVectors = std::min(maxVertexOutputComponents, minFragmentInputComponents) / 4;
