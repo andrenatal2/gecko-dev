@@ -38,6 +38,11 @@ namespace dom {
 class AudioContext;
 class Element;
 }
+namespace gfx {
+namespace vr {
+class HMDInfo;
+}
+}
 }
 
 // Popup control state enum. The values in this enum must go from most
@@ -464,9 +469,13 @@ public:
    * otherwise exits fullscreen. If aRequireTrust is true, this method only
    * changes window state in a context trusted for write.
    *
+   * If aHMD is not null, the window is made full screen on the given VR HMD
+   * device instead of its currrent display.
+   *
    * Outer windows only.
    */
-  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust) = 0;
+  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
+                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr) = 0;
 
   /**
    * Call this to check whether some node (this window, its document,

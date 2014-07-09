@@ -5975,7 +5975,7 @@ nsGlobalWindow::SetFullScreen(bool aFullScreen)
 }
 
 nsresult
-nsGlobalWindow::SetFullScreenInternal(bool aFullScreen, bool aRequireTrust)
+nsGlobalWindow::SetFullScreenInternal(bool aFullScreen, bool aRequireTrust, gfx::vr::HMDInfo* aHMD)
 {
   MOZ_ASSERT(IsOuterWindow());
 
@@ -5997,7 +5997,7 @@ nsGlobalWindow::SetFullScreenInternal(bool aFullScreen, bool aRequireTrust)
   if (!window)
     return NS_ERROR_FAILURE;
   if (rootItem != mDocShell)
-    return window->SetFullScreenInternal(aFullScreen, aRequireTrust);
+    return window->SetFullScreenInternal(aFullScreen, aRequireTrust, aHMD);
 
   // make sure we don't try to set full screen on a non-chrome window,
   // which might happen in embedding world
@@ -6032,8 +6032,15 @@ nsGlobalWindow::SetFullScreenInternal(bool aFullScreen, bool aRequireTrust)
   // want the content to fill the entire client area of the emulator window.
   if (!Preferences::GetBool("full-screen-api.ignore-widgets", false)) {
     nsCOMPtr<nsIWidget> widget = GetMainWidget();
-    if (widget)
-      widget->MakeFullScreen(aFullScreen);
+    if (widget) {
+      gfx::IntRect screenRect;
+      if (aHMD && aHMD->GetReferenceScreenRect(screenRect)) {
+        nsIntRect r(screenRect.x, screenRect.y, screenRect.width, screenRect.height);
+        widget->MakeFullScreen(aFullScreen, &r);
+      } else {
+        widget->MakeFullScreen(aFullScreen);
+      }
+    }
   }
 
   if (!mFullScreen) {

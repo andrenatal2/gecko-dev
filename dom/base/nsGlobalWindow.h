@@ -502,7 +502,8 @@ public:
   virtual void RefreshCompartmentPrincipal();
 
   // Outer windows only.
-  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust);
+  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
+                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr);
   bool FullScreen() const;
 
   // Inner windows only.
