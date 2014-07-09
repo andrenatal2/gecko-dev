@@ -369,6 +369,9 @@ CompositorOGL::Initialize()
     console->LogStringMessage(msg.get());
   }
 
+  if (!InitializeVR())
+    return false;
+
   reporter.SetSuccessful();
   return true;
 }
@@ -687,7 +690,7 @@ CompositorOGL::ClearRect(const gfx::Rect& aRect)
 
   ScopedGLState scopedScissorTestState(mGLContext, LOCAL_GL_SCISSOR_TEST, true);
   ScopedScissorRect autoScissorRect(mGLContext, aRect.x, y, aRect.width, aRect.height);
-  mGLContext->fClearColor(0.0, 0.0, 0.0, 0.0);
+  mGLContext->fClearColor(1.0, 0.0, 0.0, 0.0);
   mGLContext->fClear(LOCAL_GL_COLOR_BUFFER_BIT | LOCAL_GL_DEPTH_BUFFER_BIT);
 }
 
@@ -1013,6 +1016,11 @@ CompositorOGL::DrawQuad(const Rect& aRect,
     js::ProfileEntry::Category::GRAPHICS);
 
   MOZ_ASSERT(mFrameInProgress, "frame not started");
+
+  if (aEffectChain.mPrimaryEffect->mType == EffectTypes::VR_DISTORTION) {
+    DrawVRDistortion(aRect, aClipRect, aEffectChain, aOpacity, aTransform);
+    return;
+  }
 
   IntRect intClipRect;
   aClipRect.ToIntRect(&intClipRect);
