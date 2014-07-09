@@ -496,7 +496,8 @@ public:
   virtual bool DispatchCustomEvent(const char *aEventName);
   virtual bool DispatchResizeEvent(const nsIntSize& aSize);
   virtual void RefreshCompartmentPrincipal();
-  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust);
+  virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
+                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr);
 
   virtual void SetHasGamepadEventListener(bool aHasGamepad = true);
 

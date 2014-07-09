@@ -118,7 +118,7 @@ interface Element : Node {
    *
    * @see <https://wiki.mozilla.org/index.php?title=Gecko:FullScreenAPI>
    */
-  void mozRequestFullScreen();
+  void mozRequestFullScreen(optional RequestFullscreenOptions fsOptions);
 
   /**
    * Requests that this element be made the pointer-locked element, as per the DOM
@@ -212,3 +212,7 @@ partial interface Element {
 Element implements ChildNode;
 Element implements NonDocumentTypeChildNode;
 Element implements ParentNode;
+
+dictionary RequestFullscreenOptions {
+  HMDVRDevice? vrDisplay;
+};
