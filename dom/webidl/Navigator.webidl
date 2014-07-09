@@ -309,6 +309,12 @@ partial interface Navigator {
 };
 #endif // MOZ_GAMEPAD
 
+partial interface Navigator {
+  // Promise<sequence<VRDevice>>
+  [Throws, Pref="dom.vr.enabled"]
+  Promise getVRDevices();
+};
+
 #ifdef MOZ_B2G_BT
 partial interface Navigator {
   [Throws, CheckPermissions="bluetooth"]

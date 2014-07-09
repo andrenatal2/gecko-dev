@@ -36,6 +36,7 @@
 #include "mozilla/dom/MobileMessageManager.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/Telephony.h"
+#include "mozilla/dom/VRDeviceService.h"
 #include "mozilla/Hal.h"
 #include "nsISiteSpecificUserAgent.h"
 #include "mozilla/ClearOnShutdown.h"
@@ -1693,6 +1694,28 @@ Navigator::GetGamepads(nsTArray<nsRefPtr<Gamepad> >& aGamepads,
   win->GetGamepads(aGamepads);
 }
 #endif
+
+already_AddRefed<Promise>
+Navigator::GetVRDevices(ErrorResult& aRv)
+{
+  if (!mWindow || !mWindow->GetDocShell()) {
+    aRv.Throw(NS_ERROR_UNEXPECTED);
+    return nullptr;
+  }
+
+  nsCOMPtr<nsIGlobalObject> go = do_QueryInterface(mWindow);
+  nsRefPtr<Promise> p = new Promise(go);
+
+  nsGlobalWindow* win = static_cast<nsGlobalWindow*>(mWindow.get());
+  nsRefPtr<mozilla::dom::VRDeviceService> vrService = win->GetVRDeviceService();
+  if (vrService) {
+    vrService->GetVRDevices(p);
+  } else {
+    p->MaybeReject(NS_ERROR_NOT_AVAILABLE);
+  }
+
+  return p.forget();
+}
 
 //*****************************************************************************
 //    Navigator::nsIMozNavigatorNetwork

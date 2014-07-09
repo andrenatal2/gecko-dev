@@ -112,6 +112,7 @@ class Console;
 class External;
 class Function;
 class Gamepad;
+class VRDeviceService;
 class MediaQueryList;
 class Navigator;
 class OwningExternalOrWindowProxy;
@@ -122,6 +123,11 @@ namespace indexedDB {
 class IDBFactory;
 } // namespace indexedDB
 } // namespace dom
+namespace gfx {
+namespace vr {
+class HMDInfo;
+} // namespace vr
+} // namespace gfx
 } // namespace mozilla
 
 extern nsresult
@@ -751,6 +757,7 @@ public:
   void EnableGamepadUpdates();
   void DisableGamepadUpdates();
 
+  mozilla::dom::VRDeviceService* GetVRDeviceService();
 
 #define EVENT(name_, id_, type_, struct_)                                     \
   mozilla::dom::EventHandlerNonNull* GetOn##name_()                           \
@@ -1606,6 +1613,9 @@ protected:
   // mSpeechSynthesis is only used on inner windows.
   nsRefPtr<mozilla::dom::SpeechSynthesis> mSpeechSynthesis;
 #endif
+
+  // The VR device service for this window
+  nsRefPtr<mozilla::dom::VRDeviceService> mVRDeviceService;
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;

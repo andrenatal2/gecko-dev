@@ -4231,3 +4231,10 @@ pref("beacon.enabled", true);
 // Camera prefs
 pref("camera.control.autofocus_moving_callback.enabled", true);
 pref("camera.control.face_detection.enabled", true);
+
+#ifdef RELEASE_BUILD
+pref("dom.vr.enabled", false);
+#else
+pref("dom.vr.enabled", true);
+#endif
+
