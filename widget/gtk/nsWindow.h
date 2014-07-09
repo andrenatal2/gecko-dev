@@ -149,7 +149,7 @@ public:
 
     virtual bool       HasPendingInputEvent();
 
-    NS_IMETHOD         MakeFullScreen(bool aFullScreen);
+    NS_IMETHOD         MakeFullScreen(bool aFullScreen, nsIntRect* aReferenceRect = nullptr);
     NS_IMETHOD         HideWindowChrome(bool aShouldHide);
 
     /**

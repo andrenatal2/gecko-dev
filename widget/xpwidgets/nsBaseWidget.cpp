@@ -688,7 +688,7 @@ NS_IMETHODIMP nsBaseWidget::HideWindowChrome(bool aShouldHide)
 // Put the window into full-screen mode
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen)
+NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen, nsIntRect* aReferenceRect)
 {
   HideWindowChrome(aFullScreen);
 
@@ -709,11 +709,22 @@ NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen)
     NS_ASSERTION(screenManager, "Unable to grab screenManager.");
     if (screenManager) {
       nsCOMPtr<nsIScreen> screen;
-      screenManager->ScreenForRect(mOriginalBounds->x,
-                                   mOriginalBounds->y,
-                                   mOriginalBounds->width,
-                                   mOriginalBounds->height,
+      nsIntRect *r = aReferenceRect ? aReferenceRect : mOriginalBounds;
+      screenManager->ScreenForRect(r->x,
+                                   r->y,
+                                   r->width,
+                                   r->height,
                                    getter_AddRefs(screen));
+
+      if (aReferenceRect && !screen) {
+        NS_WARNING("Failed to MakeFullScreen with reference rect, using window");
+        screenManager->ScreenForRect(mOriginalBounds->x,
+                                     mOriginalBounds->y,
+                                     mOriginalBounds->width,
+                                     mOriginalBounds->height,
+                                     getter_AddRefs(screen));
+      }
+
       if (screen) {
         int32_t left, top, width, height;
         if (NS_SUCCEEDED(screen->GetRectDisplayPix(&left, &top, &width, &height))) {

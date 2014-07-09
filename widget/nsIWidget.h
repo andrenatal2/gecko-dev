@@ -1300,9 +1300,10 @@ class nsIWidget : public nsISupports {
 
     /**
      * Put the toplevel window into or out of fullscreen mode.
-     *
+     * If aRefernceRect is given, the screen that that rect is on
+     * will be used as the screen for fullscreen.
      */
-    NS_IMETHOD MakeFullScreen(bool aFullScreen) = 0;
+    NS_IMETHOD MakeFullScreen(bool aFullScreen, nsIntRect* aReferenceRect = nullptr) = 0;
 
     /**
      * Invalidate a specified rect for a widget so that it will be repainted
