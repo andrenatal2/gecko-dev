@@ -87,6 +87,7 @@ PARALLEL_DIRS += [
     'xml',
     'xslt',
     'resourcestats',
+    'vr',
 ]
 
 if CONFIG['OS_ARCH'] == 'WINNT':
