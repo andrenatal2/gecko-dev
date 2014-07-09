@@ -228,6 +228,7 @@ struct ContainerLayerAttributes {
   float inheritedXScale;
   float inheritedYScale;
   LayerColor backgroundColor;
+  uint64_t hmdInfo; // XXX need to pass something useful here, not a bare pointer
 };
 struct ColorLayerAttributes     { LayerColor color; nsIntRect bounds; };
 struct CanvasLayerAttributes    { GraphicsFilterType filter; nsIntRect bounds; };
