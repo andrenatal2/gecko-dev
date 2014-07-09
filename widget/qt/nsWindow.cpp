@@ -733,7 +733,7 @@ nsWindow::ReparentNativeWidget(nsIWidget *aNewParent)
 }
 
 NS_IMETHODIMP
-nsWindow::MakeFullScreen(bool aFullScreen)
+nsWindow::MakeFullScreen(bool aFullScreen, nsIntRect*)
 {
     NS_ENSURE_TRUE(mWidget, NS_ERROR_FAILURE);
 
