@@ -25,6 +25,7 @@
 #include "nsLayoutUtils.h"
 #include "nsDisplayListInvalidation.h"
 #include "DisplayListClipState.h"
+#include "gfxVR.h"
 
 #include <stdint.h>
 
@@ -3437,6 +3438,30 @@ public:
 
   nscoord mLeftEdge;  // length from the left side
   nscoord mRightEdge; // length from the right side
+};
+
+/**
+ * VR yay
+ */
+
+class nsDisplayVR : public nsDisplayOwnLayer {
+public:
+  nsDisplayVR(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
+              nsDisplayList* aList, mozilla::gfx::vr::HMDInfo* aHMD);
+
+  virtual LayerState GetLayerState(nsDisplayListBuilder* aBuilder,
+                                   LayerManager* aManager,
+                                   const ContainerLayerParameters& aParameters) MOZ_OVERRIDE
+  {
+    return mozilla::LAYER_ACTIVE;
+  }
+
+  virtual already_AddRefed<Layer> BuildLayer(nsDisplayListBuilder* aBuilder,
+                                             LayerManager* aManager,
+                                             const ContainerLayerParameters& aContainerParameters) MOZ_OVERRIDE;
+
+protected:
+  nsRefPtr<mozilla::gfx::vr::HMDInfo> mHMD;
 };
 
 #endif /*NSDISPLAYLIST_H_*/
