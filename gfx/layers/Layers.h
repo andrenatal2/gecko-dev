@@ -46,6 +46,7 @@
 #include "nscore.h"                     // for nsACString, nsAString
 #include "prlog.h"                      // for PRLogModuleInfo
 #include "gfx2DGlue.h"
+#include "gfxVR.h"
 
 class gfxContext;
 
@@ -1782,6 +1783,12 @@ public:
    */
   static bool HasOpaqueAncestorLayer(Layer* aLayer);
 
+  /**
+   * VR
+   */
+  void SetVRHMDInfo(gfx::vr::HMDInfo* aHMD) { mHMDInfo = aHMD; }
+  gfx::vr::HMDInfo* GetVRHMDInfo() { return mHMDInfo; }
+
 protected:
   friend class ReadbackProcessor;
 
@@ -1829,6 +1836,7 @@ protected:
   bool mUseIntermediateSurface;
   bool mSupportsComponentAlphaChildren;
   bool mMayHaveReadbackChild;
+  nsRefPtr<gfx::vr::HMDInfo> mHMDInfo;
 };
 
 /**

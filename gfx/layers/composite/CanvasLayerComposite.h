@@ -49,6 +49,7 @@ public:
 
   virtual Layer* GetLayer() MOZ_OVERRIDE;
   virtual void RenderLayer(const nsIntRect& aClipRect) MOZ_OVERRIDE;
+  virtual void RenderLayer(const nsIntRect& aClipRect, gfx::vr::HMDInfo* aHMD) MOZ_OVERRIDE;
 
   virtual void CleanupResources() MOZ_OVERRIDE;
 

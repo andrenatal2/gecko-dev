@@ -276,12 +276,119 @@ static void PrintUniformityInfo(Layer* aLayer)
     TimeStamp::Now(), aLayer, layerScroll.x, layerScroll.y);
 }
 
+template<class ContainerT> void
+ContainerRenderVR(ContainerT* aContainer,
+                  LayerManagerComposite* aManager,
+                  const nsIntRect& aClipRect,
+                  gfx::vr::HMDInfo* aHMD)
+{
+  RefPtr<CompositingRenderTarget> surface;
+
+  Compositor* compositor = aManager->GetCompositor();
+
+  RefPtr<CompositingRenderTarget> previousTarget = compositor->GetCurrentRenderTarget();
+
+  nsIntRect visibleRect = aContainer->GetEffectiveVisibleRegion().GetBounds();
+
+  float opacity = aContainer->GetEffectiveOpacity();
+
+  SurfaceInitMode mode = INIT_MODE_CLEAR;
+  gfx::IntRect surfaceRect = gfx::IntRect(visibleRect.x, visibleRect.y,
+                                          visibleRect.width, visibleRect.height);
+  // we're about to create a framebuffer backed by textures to use as an intermediate
+  // surface. What to do if its size (as given by framebufferRect) would exceed the
+  // maximum texture size supported by the GL? The present code chooses the compromise
+  // of just clamping the framebuffer's size to the max supported size.
+  // This gives us a lower resolution rendering of the intermediate surface (children layers).
+  // See bug 827170 for a discussion.
+  int32_t maxTextureSize = compositor->GetMaxTextureSize();
+  surfaceRect.width = std::min(maxTextureSize, surfaceRect.width);
+  surfaceRect.height = std::min(maxTextureSize, surfaceRect.height);
+  if (aContainer->GetEffectiveVisibleRegion().GetNumRects() == 1 &&
+      (aContainer->GetContentFlags() & Layer::CONTENT_OPAQUE))
+  {
+    mode = INIT_MODE_NONE;
+  }
+
+  surface = compositor->CreateRenderTarget(surfaceRect, mode);
+  if (!surface) {
+    return;
+  }
+
+  compositor->SetRenderTarget(surface);
+
+  nsAutoTArray<Layer*, 12> children;
+  aContainer->SortChildrenBy3DZOrder(children);
+
+  /**
+   * Render this container's contents.
+   */
+  for (uint32_t i = 0; i < children.Length(); i++) {
+    LayerComposite* layerToRender = static_cast<LayerComposite*>(children.ElementAt(i)->ImplData());
+    Layer* layer = layerToRender->GetLayer();
+
+    if (layer->GetEffectiveVisibleRegion().IsEmpty() &&
+        !layer->AsContainerLayer()) {
+      continue;
+    }
+
+    nsIntRect clipRect = layer->
+        CalculateScissorRect(aClipRect, &aManager->GetWorldTransform());
+    if (clipRect.IsEmpty()) {
+      continue;
+    }
+
+    if (layer->GetType() == Layer::TYPE_CANVAS) {
+      // 
+    }
+
+    layerToRender->RenderLayer(clipRect);
+
+    if (gfxPrefs::LayersScrollGraph()) DrawVelGraph(clipRect, aManager, layer);
+    if (gfxPrefs::UniformityInfo()) PrintUniformityInfo(layer);
+    if (gfxPrefs::DrawLayerInfo()) DrawLayerInfo(clipRect, aManager, layer);
+
+    // invariant: our GL context should be current here, I don't think we can
+    // assert it though
+  }
+
+  // Unbind the current surface and rebind the previous one.
+#ifdef MOZ_DUMP_PAINTING
+  if (gfxUtils::sDumpPainting) {
+    RefPtr<gfx::DataSourceSurface> surf = surface->Dump(aManager->GetCompositor());
+    if (surf) {
+      WriteSnapshotToDumpFile(aContainer, surf);
+    }
+  }
+#endif
+
+  compositor->SetRenderTarget(previousTarget);
+
+  // draw the temporary surface with VR distortion to the original destination
+  EffectChain effectChain(aContainer);
+  effectChain.mPrimaryEffect = new EffectVRDistortion(aHMD, surface);
+
+  // XXX we shouldn't use visibleRect here -- the VR distortion needs to know the
+  // full rect, not just the visible one.  Luckily, right now, VR distortion is only
+  // rendered when the element is fullscreen, so the visibleRect will be right anyway.
+  gfx::Rect rect(visibleRect.x, visibleRect.y, visibleRect.width, visibleRect.height);
+  gfx::Rect clipRect(aClipRect.x, aClipRect.y, aClipRect.width, aClipRect.height);
+  aManager->GetCompositor()->DrawQuad(rect, clipRect, effectChain, opacity,
+                                      aContainer->GetEffectiveTransform());
+}
+
 // ContainerRender is shared between RefLayer and ContainerLayer
 template<class ContainerT> void
 ContainerRender(ContainerT* aContainer,
                 LayerManagerComposite* aManager,
                 const nsIntRect& aClipRect)
 {
+  gfx::vr::HMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
+  if (hmdInfo && hmdInfo->GetConfiguration().IsValid()) {
+    ContainerRenderVR(aContainer, aManager, aClipRect, hmdInfo);
+    return;
+  }
+
   /**
    * Setup our temporary surface for rendering the contents of this container.
    */
@@ -296,6 +403,7 @@ ContainerRender(ContainerT* aContainer,
   float opacity = aContainer->GetEffectiveOpacity();
 
   bool needsSurface = aContainer->UseIntermediateSurface();
+
   bool surfaceCopyNeeded;
   aContainer->DefaultComputeSupportsComponentAlphaChildren(&surfaceCopyNeeded);
   if (needsSurface) {
@@ -451,6 +559,10 @@ ContainerRender(ContainerT* aContainer,
 #endif
 
     compositor->SetRenderTarget(previousTarget);
+  }
+
+  if (needsSurface) {
+    // draw the temporary surface to the original destionation
     EffectChain effectChain(aContainer);
     LayerManagerComposite::AutoAddMaskEffect autoMaskEffect(aContainer->GetMaskLayer(),
                                                             effectChain,
@@ -527,6 +639,55 @@ void
 ContainerLayerComposite::RenderLayer(const nsIntRect& aClipRect)
 {
   ContainerRender(this, mCompositeManager, aClipRect);
+
+#if 0
+  // Right now, we always do intermediate above in ContainerRender.
+  // We should fast-path single-child canvases.
+
+  // VR rendering case.  We need to do a couple of special things
+  // here:
+  //
+  // 1 - If we have a Canvas child, we need to just do a pass-through
+  // rendering.  If we only have a Canvas child, we should short
+  // circuit everything else and just do the VR effect.
+  //
+  // 2 - Any other children need to be rendered twice with their
+  // transforms moved appropriately based on eye distance.
+
+  // XXX we should only force this if we have a HMDInfo.
+  // XXX Also, we should *not* do this if we only have a single
+  // canvas child; we should instead see if we can render that
+  // canvas's texture directly with a VR distortion shader.
+
+  // This is the full complex rendering path.  Otherwise..
+  //if (HasMultipleChildren() || GetFirstChild()->GetType != Layer::TYPE_CANVAS)
+  //{
+  //  mUseIntermediateSurface = true;
+  //}
+
+  //ContainerRender(this, mCompositeManager, aClipRect);
+
+  gfx::Matrix4x4 orig(mEffectiveTransform);
+  gfx::Matrix4x4 xLeft;
+  gfx::Matrix4x4 xRight;
+
+  xLeft.Translate(-20, 0, 0);
+  xRight.Translate(20, 0, 0);
+
+  xLeft = xLeft * orig;
+  xRight = xRight * orig;
+    
+  //mEffectiveTransform = xLeft;
+  //ComputeEffectiveTransformsForChildren(mEffectiveTransform);
+  ContainerRender(this, mCompositeManager, aClipRect);
+
+  mEffectiveTransform = xRight;
+  ComputeEffectiveTransformsForChildren(mEffectiveTransform);
+  ContainerRender(this, mCompositeManager, aClipRect);
+
+  mEffectiveTransform = orig;
+  ComputeEffectiveTransformsForChildren(mEffectiveTransform);
+#endif
 }
 
 void

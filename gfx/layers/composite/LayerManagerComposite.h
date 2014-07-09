@@ -40,6 +40,10 @@ struct nsIntSize;
 namespace mozilla {
 namespace gfx {
 class DrawTarget;
+
+namespace vr {
+class HMDInfo;
+}
 }
 
 namespace gl {
@@ -323,6 +327,9 @@ public:
   virtual Layer* GetLayer() = 0;
 
   virtual void RenderLayer(const nsIntRect& aClipRect) = 0;
+
+  // VR hack for fast-path for some layers
+  virtual void RenderLayer(const nsIntRect& aClipRect, gfx::vr::HMDInfo* aHMD) { RenderLayer(aClipRect); }
 
   virtual bool SetCompositableHost(CompositableHost*)
   {
