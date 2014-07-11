@@ -12,36 +12,35 @@
 
 namespace mozilla {
 namespace gfx {
-namespace vr {
 
-MOZ_BEGIN_ENUM_CLASS(HMDType, uint16_t)
+MOZ_BEGIN_ENUM_CLASS(VRHMDType, uint16_t)
   Oculus,
   NumHMDTypes
-MOZ_END_ENUM_CLASS(HMDType)
+MOZ_END_ENUM_CLASS(VRHMDType)
 
-struct FieldOfView {
-  static FieldOfView FromCSSPerspectiveInfo(double aPerspectiveDistance,
-                                            const Point& aPerspectiveOrigin,
-                                            const Point& aTransformOrigin,
-                                            const Rect& aContentRectangle)
+struct VRFieldOfView {
+  static VRFieldOfView FromCSSPerspectiveInfo(double aPerspectiveDistance,
+                                              const Point& aPerspectiveOrigin,
+                                              const Point& aTransformOrigin,
+                                              const Rect& aContentRectangle)
   {
     /**/
-    return FieldOfView();
+    return VRFieldOfView();
   }
 
-  FieldOfView() {}
-  FieldOfView(double up, double right, double down, double left)
+  VRFieldOfView() {}
+  VRFieldOfView(double up, double right, double down, double left)
     : upDegrees(up), rightDegrees(right), downDegrees(down), leftDegrees(left)
   {}
 
-  bool operator==(const FieldOfView& other) const {
+  bool operator==(const VRFieldOfView& other) const {
     return other.upDegrees == upDegrees &&
            other.downDegrees == downDegrees &&
            other.rightDegrees == rightDegrees &&
            other.leftDegrees == leftDegrees;
   }
 
-  bool operator!=(const FieldOfView& other) const {
+  bool operator!=(const VRFieldOfView& other) const {
     return !(*this == other);
   }
 
@@ -60,12 +59,12 @@ struct FieldOfView {
 
 // 12 floats per vertex. Position, tex coordinates
 // for each channel, and 4 generic attributes
-struct DistortionConstants {
+struct VRDistortionConstants {
   float eyeToSourceScaleAndOffset[4];
   float destinationScaleAndOffset[4];
 };
 
-struct DistortionVertex {
+struct VRDistortionVertex {
   float pos[2];
   float texR[2];
   float texG[2];
@@ -73,12 +72,12 @@ struct DistortionVertex {
   float genericAttribs[4];
 };
 
-struct DistortionMesh {
-  nsTArray<DistortionVertex> mVertices;
+struct VRDistortionMesh {
+  nsTArray<VRDistortionVertex> mVertices;
   nsTArray<uint16_t> mIndices;
 };
 
-struct HMDSensorState {
+struct VRHMDSensorState {
   double timestamp;
   uint32_t flags;
   float orientation[4];
@@ -89,7 +88,7 @@ struct HMDSensorState {
   float linearAcceleration[3];
 
   void Clear() {
-    memset(this, 0, sizeof(HMDSensorState));
+    memset(this, 0, sizeof(VRHMDSensorState));
   }
 };
 
@@ -97,17 +96,17 @@ struct HMDSensorState {
  * the configuration of one HMDInfo matches another; for rendering purposes,
  * really asking "can the rendering details of this one be used for the other"
  */
-struct HMDConfiguration {
-  HMDConfiguration() : hmdType(HMDType::NumHMDTypes) {}
+struct VRHMDConfiguration {
+  VRHMDConfiguration() : hmdType(VRHMDType::NumHMDTypes) {}
 
-  bool operator==(const HMDConfiguration& other) const {
+  bool operator==(const VRHMDConfiguration& other) const {
     return hmdType == other.hmdType &&
       value == other.value &&
       fov[0] == other.fov[0] &&
       fov[1] == other.fov[1];
   }
 
-  bool operator!=(const HMDConfiguration& other) const {
+  bool operator!=(const VRHMDConfiguration& other) const {
     return hmdType != other.hmdType ||
       value != other.value ||
       fov[0] != other.fov[0] ||
@@ -115,15 +114,15 @@ struct HMDConfiguration {
   }
 
   bool IsValid() const {
-    return hmdType != HMDType::NumHMDTypes;
+    return hmdType != VRHMDType::NumHMDTypes;
   }
 
-  HMDType hmdType;
+  VRHMDType hmdType;
   uint32_t value;
-  FieldOfView fov[2];
+  VRFieldOfView fov[2];
 };
 
-class HMDInfo : public RefCounted<HMDInfo> {
+class VRHMDInfo : public RefCounted<VRHMDInfo> {
 public:
   enum Eye {
     Eye_Left,
@@ -137,20 +136,20 @@ public:
   };
 
 public:
-  MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(HMDInfo)
+  MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(VRHMDInfo)
 
-  virtual ~HMDInfo() { }
+  virtual ~VRHMDInfo() { }
 
-  HMDType GetType() const { return mType; }
+  VRHMDType GetType() const { return mType; }
 
-  virtual const FieldOfView& GetRecommendedEyeFOV(uint32_t whichEye) { return mRecommendedEyeFOV[whichEye]; }
-  virtual const FieldOfView& GetMaximumEyeFOV(uint32_t whichEye) { return mMaximumEyeFOV[whichEye]; }
+  virtual const VRFieldOfView& GetRecommendedEyeFOV(uint32_t whichEye) { return mRecommendedEyeFOV[whichEye]; }
+  virtual const VRFieldOfView& GetMaximumEyeFOV(uint32_t whichEye) { return mMaximumEyeFOV[whichEye]; }
 
-  const HMDConfiguration& GetConfiguration() const { return mConfiguration; }
+  const VRHMDConfiguration& GetConfiguration() const { return mConfiguration; }
 
   /* set the FOV for this HMD unit; this triggers a computation of all the remaining bits.  Returns false if it fails */
-  virtual bool SetFOV(const FieldOfView& aFOVLeft, const FieldOfView& aFOVRight) = 0;
-  const FieldOfView& GetEyeFOV(uint32_t whichEye)  { return mEyeFOV[whichEye]; }
+  virtual bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight) = 0;
+  const VRFieldOfView& GetEyeFOV(uint32_t whichEye)  { return mEyeFOV[whichEye]; }
 
   /* Suggested resolution for rendering a single eye.  Assumption is that side-by-side left/right rendering will be 2x of this size. */
   const IntSize& SuggestedEyeResolution() const { return mEyeResolution; }
@@ -158,7 +157,7 @@ public:
 
   virtual uint32_t GetSupportedSensorStateBits() { return mSupportedSensorBits; }
   virtual bool StartSensorTracking() = 0;
-  virtual HMDSensorState GetSensorState(double timeOffset = 0.0) = 0;
+  virtual VRHMDSensorState GetSensorState(double timeOffset = 0.0) = 0;
   virtual void StopSensorTracking() = 0;
 
   virtual void FillDistortionConstants(uint32_t whichEye,
@@ -166,9 +165,9 @@ public:
                                        const IntRect& eyeViewport, // the viewport within the texture for the current eye
                                        const Size& destViewport,   // the size of the destination viewport
                                        const Rect& destRect,       // the rectangle within the dest viewport that this should be rendered
-                                       DistortionConstants& values) = 0;
+                                       VRDistortionConstants& values) = 0;
 
-  virtual const DistortionMesh& GetDistortionMesh(uint32_t whichEye) const { return mDistortionMesh[whichEye]; }
+  virtual const VRDistortionMesh& GetDistortionMesh(uint32_t whichEye) const { return mDistortionMesh[whichEye]; }
 
   virtual bool GetReferenceScreenRect(IntRect& aRect) {
     if (mHasScreenRect)
@@ -177,32 +176,31 @@ public:
   }
 
 protected:
-  HMDInfo(HMDType aType) : mType(aType), mHasScreenRect(false) {}
+  VRHMDInfo(VRHMDType aType) : mType(aType), mHasScreenRect(false) {}
 
-  HMDType mType;
-  HMDConfiguration mConfiguration;
+  VRHMDType mType;
+  VRHMDConfiguration mConfiguration;
 
-  FieldOfView mEyeFOV[NumEyes];
+  VRFieldOfView mEyeFOV[NumEyes];
   IntSize mEyeResolution;
   Point3D mEyeTranslation[NumEyes];
-  DistortionMesh mDistortionMesh[NumEyes];
+  VRDistortionMesh mDistortionMesh[NumEyes];
   uint32_t mSupportedSensorBits;
 
-  FieldOfView mRecommendedEyeFOV[NumEyes];
-  FieldOfView mMaximumEyeFOV[NumEyes];
+  VRFieldOfView mRecommendedEyeFOV[NumEyes];
+  VRFieldOfView mMaximumEyeFOV[NumEyes];
 
   bool mHasScreenRect;
   IntRect mScreenRect;
 };
 
-class OculusHMDManager {
+class VRHMDManagerOculus {
 public:
   static bool Init();
   static void Destroy();
-  static void GetOculusHMDs(nsTArray<RefPtr<HMDInfo> >& aHMDResult);
+  static void GetOculusHMDs(nsTArray<RefPtr<VRHMDInfo> >& aHMDResult);
 };
 
-} // namespace vr
 } // namespace gfx
 } // namespace mozilla
 

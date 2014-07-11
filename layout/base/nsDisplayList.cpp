@@ -5452,7 +5452,7 @@ nsDisplaySVGEffects::PrintEffects(nsACString& aTo)
 #endif
 
 nsDisplayVR::nsDisplayVR(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
-                         nsDisplayList* aList, mozilla::gfx::vr::HMDInfo* aHMD)
+                         nsDisplayList* aList, mozilla::gfx::VRHMDInfo* aHMD)
   : nsDisplayOwnLayer(aBuilder, aFrame, aList)
   , mHMD(aHMD)
 {

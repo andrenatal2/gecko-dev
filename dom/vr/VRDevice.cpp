@@ -14,9 +14,7 @@ using namespace mozilla::gfx;
 
 namespace mozilla {
 namespace gfx {
-namespace vr {
-class HMDInfo;
-}
+class VRHMDInfo;
 }
 
 namespace dom {
@@ -53,20 +51,20 @@ static void
 ReleaseHMDInfoRef(void *, nsIAtom*, void *aPropertyValue, void *)
 {
   if (aPropertyValue) {
-    static_cast<vr::HMDInfo*>(aPropertyValue)->Release();
+    static_cast<VRHMDInfo*>(aPropertyValue)->Release();
   }
 }
 
 void
 HMDVRDevice::XxxToggleElementVR(Element& aElement)
 {
-  vr::HMDInfo* hmdPtr = static_cast<vr::HMDInfo*>(aElement.GetProperty(nsGkAtoms::vr_state));
+  VRHMDInfo* hmdPtr = static_cast<VRHMDInfo*>(aElement.GetProperty(nsGkAtoms::vr_state));
   if (hmdPtr) {
     aElement.DeleteProperty(nsGkAtoms::vr_state);
     return;
   }
 
-  RefPtr<vr::HMDInfo> hmdRef = mHMD;
+  RefPtr<VRHMDInfo> hmdRef = mHMD;
   aElement.SetProperty(nsGkAtoms::vr_state, hmdRef.forget().drop(),
                        ReleaseHMDInfoRef,
                        true);

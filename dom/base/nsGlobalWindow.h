@@ -124,9 +124,7 @@ class IDBFactory;
 } // namespace indexedDB
 } // namespace dom
 namespace gfx {
-namespace vr {
 class HMDInfo;
-} // namespace vr
 } // namespace gfx
 } // namespace mozilla
 
@@ -497,7 +495,7 @@ public:
   virtual bool DispatchResizeEvent(const nsIntSize& aSize);
   virtual void RefreshCompartmentPrincipal();
   virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
-                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr);
+                                         mozilla::gfx::VRHMDInfo *aHMD = nullptr);
 
   virtual void SetHasGamepadEventListener(bool aHasGamepad = true);
 

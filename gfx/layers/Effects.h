@@ -99,7 +99,7 @@ struct EffectMask : public Effect
 
 struct EffectVRDistortion : public Effect
 {
-  EffectVRDistortion(gfx::vr::HMDInfo* aHMD,
+  EffectVRDistortion(gfx::VRHMDInfo* aHMD,
                      CompositingRenderTarget* aRenderTarget)
     : Effect(EffectTypes::VR_DISTORTION)
     , mHMD(aHMD)
@@ -107,7 +107,7 @@ struct EffectVRDistortion : public Effect
     , mTexture(aRenderTarget)
   {}
 
-  EffectVRDistortion(gfx::vr::HMDInfo* aHMD,
+  EffectVRDistortion(gfx::VRHMDInfo* aHMD,
                      TextureSource* aTexture)
     : Effect(EffectTypes::VR_DISTORTION)
     , mHMD(aHMD)
@@ -118,7 +118,7 @@ struct EffectVRDistortion : public Effect
   virtual const char* Name() { return "EffectVRDistortion"; }
   virtual void PrintInfo(std::stringstream& aStream, const char* aPrefix);
 
-  nsRefPtr<gfx::vr::HMDInfo> mHMD;
+  nsRefPtr<gfx::VRHMDInfo> mHMD;
   RefPtr<CompositingRenderTarget> mRenderTarget;
   TextureSource* mTexture;
 

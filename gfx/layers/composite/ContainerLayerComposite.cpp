@@ -280,7 +280,7 @@ template<class ContainerT> void
 ContainerRenderVR(ContainerT* aContainer,
                   LayerManagerComposite* aManager,
                   const nsIntRect& aClipRect,
-                  gfx::vr::HMDInfo* aHMD)
+                  gfx::VRHMDInfo* aHMD)
 {
   RefPtr<CompositingRenderTarget> surface;
 
@@ -383,7 +383,7 @@ ContainerRender(ContainerT* aContainer,
                 LayerManagerComposite* aManager,
                 const nsIntRect& aClipRect)
 {
-  gfx::vr::HMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
+  gfx::VRHMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
   if (hmdInfo && hmdInfo->GetConfiguration().IsValid()) {
     ContainerRenderVR(aContainer, aManager, aClipRect, hmdInfo);
     return;

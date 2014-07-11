@@ -79,7 +79,7 @@ CanvasLayerComposite::RenderLayer(const nsIntRect& aClipRect)
 }
 
 void
-CanvasLayerComposite::RenderLayer(const nsIntRect& aClipRect, vr::HMDInfo* aHMD)
+CanvasLayerComposite::RenderLayer(const nsIntRect& aClipRect, VRHMDInfo* aHMD)
 {
   if (!mImageHost || !mImageHost->IsAttached()) {
     return;

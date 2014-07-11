@@ -39,9 +39,7 @@ class AudioContext;
 class Element;
 }
 namespace gfx {
-namespace vr {
-class HMDInfo;
-}
+class VRHMDInfo;
 }
 }
 
@@ -496,7 +494,7 @@ public:
    * of its currrent display.
    */
   virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
-                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr) = 0;
+                                         mozilla::gfx::VRHMDInfo *aHMD = nullptr) = 0;
 
   /**
    * Call this to check whether some node (this window, its document,

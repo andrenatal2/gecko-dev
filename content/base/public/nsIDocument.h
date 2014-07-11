@@ -132,7 +132,7 @@ typedef CallbackObjectHolder<NodeFilter, nsIDOMNodeFilter> NodeFilterHolder;
 
 struct FullScreenOptions {
   FullScreenOptions() { }
-  nsRefPtr<gfx::vr::HMDInfo> mVRHMDDevice;
+  nsRefPtr<gfx::VRHMDInfo> mVRHMDDevice;
 };
 
 } // namespace dom
