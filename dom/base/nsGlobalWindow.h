@@ -124,9 +124,7 @@ class IDBFactory;
 } // namespace indexedDB
 } // namespace dom
 namespace gfx {
-namespace vr {
 class HMDInfo;
-} // namespace vr
 } // namespace gfx
 } // namespace mozilla
 
@@ -503,7 +501,7 @@ public:
 
   // Outer windows only.
   virtual nsresult SetFullScreenInternal(bool aIsFullScreen, bool aRequireTrust,
-                                         mozilla::gfx::vr::HMDInfo *aHMD = nullptr);
+                                         mozilla::gfx::VRHMDInfo *aHMD = nullptr);
   bool FullScreen() const;
 
   // Inner windows only.

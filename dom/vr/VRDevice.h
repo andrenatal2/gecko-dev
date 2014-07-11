@@ -85,15 +85,15 @@ public:
 
   void XxxToggleElementVR(Element& aElement);
 
-  gfx::vr::HMDInfo *GetHMD() { return mHMD.get(); }
+  gfx::VRHMDInfo *GetHMD() { return mHMD.get(); }
 
 protected:
-  HMDVRDevice(nsISupports* aParent, gfx::vr::HMDInfo* aHMD)
+  HMDVRDevice(nsISupports* aParent, gfx::VRHMDInfo* aHMD)
     : VRDevice(aParent)
     , mHMD(aHMD)
   { }
 
-  RefPtr<gfx::vr::HMDInfo> mHMD;
+  RefPtr<gfx::VRHMDInfo> mHMD;
 };
 
 class PositionSensorVRDevice : public VRDevice

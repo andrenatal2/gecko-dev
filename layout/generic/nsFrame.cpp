@@ -97,9 +97,7 @@ using namespace mozilla::layout;
 
 namespace mozilla {
 namespace gfx {
-namespace vr {
-class HMDInfo;
-}
+class VRHMDInfo;
 }
 }
 
@@ -1970,11 +1968,10 @@ nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder* aBuilder,
                         nsLayoutUtils::SCROLLABLE_SAME_DOC |
                         nsLayoutUtils::SCROLLABLE_INCLUDE_HIDDEN));
 
-
   nsDisplayListBuilder::AutoBuildingDisplayList
     buildingDisplayList(aBuilder, this, dirtyRect, true);
 
-  mozilla::gfx::vr::HMDInfo* vrHMDInfo = mContent ? static_cast<mozilla::gfx::vr::HMDInfo*>(mContent->GetProperty(nsGkAtoms::vr_state)) : nullptr;
+  mozilla::gfx::VRHMDInfo* vrHMDInfo = mContent ? static_cast<mozilla::gfx::VRHMDInfo*>(mContent->GetProperty(nsGkAtoms::vr_state)) : nullptr;
 
   DisplayListClipState::AutoSaveRestore clipState(aBuilder);
 

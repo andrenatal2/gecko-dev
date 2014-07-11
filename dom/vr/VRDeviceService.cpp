@@ -35,7 +35,7 @@ namespace {
 const char* kEnabledPref = "dom.vr.enabled";
 
 void
-CopyFieldOfView(const gfx::vr::FieldOfView& aSrc, VRFieldOfView& aDest)
+CopyFieldOfView(const gfx::VRFieldOfView& aSrc, VRFieldOfView& aDest)
 {
   aDest.mUpDegrees = aSrc.upDegrees;
   aDest.mRightDegrees = aSrc.rightDegrees;
@@ -43,10 +43,10 @@ CopyFieldOfView(const gfx::vr::FieldOfView& aSrc, VRFieldOfView& aDest)
   aDest.mLeftDegrees = aSrc.leftDegrees;
 }
 
-gfx::vr::HMDInfo::Eye
+gfx::VRHMDInfo::Eye
 EyeToEye(const VREye& aEye)
 {
-  return aEye == VREye::Left ? gfx::vr::HMDInfo::Eye_Left : gfx::vr::HMDInfo::Eye_Right;
+  return aEye == VREye::Left ? gfx::VRHMDInfo::Eye_Left : gfx::VRHMDInfo::Eye_Right;
 }
 
 } // namespace
@@ -54,7 +54,7 @@ EyeToEye(const VREye& aEye)
 class HMDInfoVRDevice : public HMDVRDevice
 {
 public:
-  HMDInfoVRDevice(gfx::vr::HMDInfo* aHMD)
+  HMDInfoVRDevice(gfx::VRHMDInfo* aHMD)
     : HMDVRDevice(nullptr, aHMD)
   {
     // XXX TODO use real names/IDs
@@ -67,18 +67,18 @@ public:
 
   virtual ~HMDInfoVRDevice() { }
 
-  virtual void SetFieldOfView(const VRFieldOfView& aLeftFOV,
-                              const VRFieldOfView& aRightFOV)
+  virtual void SetFieldOfView(const dom::VRFieldOfView& aLeftFOV,
+                              const dom::VRFieldOfView& aRightFOV)
   {
-    vr::FieldOfView left = vr::FieldOfView(aLeftFOV.mUpDegrees, aLeftFOV.mRightDegrees,
-                                           aLeftFOV.mDownDegrees, aLeftFOV.mLeftDegrees);
-    vr::FieldOfView right = vr::FieldOfView(aRightFOV.mUpDegrees, aRightFOV.mRightDegrees,
-                                            aRightFOV.mDownDegrees, aRightFOV.mLeftDegrees);
+    gfx::VRFieldOfView left = gfx::VRFieldOfView(aLeftFOV.mUpDegrees, aLeftFOV.mRightDegrees,
+                                                 aLeftFOV.mDownDegrees, aLeftFOV.mLeftDegrees);
+    gfx::VRFieldOfView right = gfx::VRFieldOfView(aRightFOV.mUpDegrees, aRightFOV.mRightDegrees,
+                                                  aRightFOV.mDownDegrees, aRightFOV.mLeftDegrees);
 
     if (left.IsZero())
-      left = mHMD->GetRecommendedEyeFOV(vr::HMDInfo::Eye_Left);
+      left = mHMD->GetRecommendedEyeFOV(VRHMDInfo::Eye_Left);
     if (right.IsZero())
-      right = mHMD->GetRecommendedEyeFOV(vr::HMDInfo::Eye_Right);
+      right = mHMD->GetRecommendedEyeFOV(VRHMDInfo::Eye_Right);
 
     mHMD->SetFOV(left, right);
   }
@@ -107,7 +107,7 @@ public:
 class HMDPositionVRDevice : public PositionSensorVRDevice
 {
 public:
-  HMDPositionVRDevice(gfx::vr::HMDInfo* aHMD)
+  HMDPositionVRDevice(gfx::VRHMDInfo* aHMD)
     : PositionSensorVRDevice(nullptr)
     , mHMD(aHMD)
   {
@@ -120,11 +120,11 @@ public:
   }
 
   void GetState(double timeOffset, VRPositionState& aOut) {
-    gfx::vr::HMDSensorState state = mHMD->GetSensorState(timeOffset);
+    gfx::VRHMDSensorState state = mHMD->GetSensorState(timeOffset);
 
     aOut.mTimeStamp = state.timestamp;
 
-    if (state.flags & gfx::vr::HMDInfo::State_Position) {
+    if (state.flags & gfx::VRHMDInfo::State_Position) {
       aOut.mPosition.mX = state.position[0];
       aOut.mPosition.mY = state.position[1];
       aOut.mPosition.mZ = state.position[2];
@@ -138,7 +138,7 @@ public:
       aOut.mLinearAcceleration.mZ = state.linearAcceleration[2];
     }
 
-    if (state.flags & gfx::vr::HMDInfo::State_Orientation) {
+    if (state.flags & gfx::VRHMDInfo::State_Orientation) {
       aOut.mOrientation.mX = state.orientation[0];
       aOut.mOrientation.mY = state.orientation[1];
       aOut.mOrientation.mZ = state.orientation[2];
@@ -155,7 +155,7 @@ public:
   }
 
 protected:
-  RefPtr<gfx::vr::HMDInfo> mHMD;
+  RefPtr<gfx::VRHMDInfo> mHMD;
 };
 
 NS_IMPL_ISUPPORTS(VRDeviceService, nsIObserver)
@@ -209,20 +209,20 @@ VRDeviceService::Initialize()
 
   mKnownDevices.Clear();
 
-  if (!gfx::vr::OculusHMDManager::Init()) {
+  if (!gfx::VRHMDManagerOculus::Init()) {
     NS_WARNING("Failed to initialize Oculus HMD Manager");
     return false;
   }
 
-  nsTArray<RefPtr<gfx::vr::HMDInfo> > hmds;
-  gfx::vr::OculusHMDManager::GetOculusHMDs(hmds);
+  nsTArray<RefPtr<gfx::VRHMDInfo> > hmds;
+  gfx::VRHMDManagerOculus::GetOculusHMDs(hmds);
 
   for (size_t i = 0; i < hmds.Length(); ++i) {
     uint32_t sensorBits = hmds[i]->GetSupportedSensorStateBits();
     mKnownDevices.AppendElement(new HMDInfoVRDevice(hmds[i]));
 
     if (sensorBits &
-        (gfx::vr::HMDInfo::State_Position | gfx::vr::HMDInfo::State_Orientation))
+        (gfx::VRHMDInfo::State_Position | gfx::VRHMDInfo::State_Orientation))
     {
       mKnownDevices.AppendElement(new HMDPositionVRDevice(hmds[i]));
     }

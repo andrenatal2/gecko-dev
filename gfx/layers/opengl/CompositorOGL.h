@@ -154,7 +154,7 @@ protected:
 };
 
 struct CompositorOGLVRObjects {
-  gfx::vr::HMDConfiguration mConfiguration;
+  gfx::VRHMDConfiguration mConfiguration;
 
   GLuint mDistortionVertices[2];
   GLuint mDistortionIndices[2];

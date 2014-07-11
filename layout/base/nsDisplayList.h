@@ -3454,7 +3454,7 @@ public:
 class nsDisplayVR : public nsDisplayOwnLayer {
 public:
   nsDisplayVR(nsDisplayListBuilder* aBuilder, nsIFrame* aFrame,
-              nsDisplayList* aList, mozilla::gfx::vr::HMDInfo* aHMD);
+              nsDisplayList* aList, mozilla::gfx::VRHMDInfo* aHMD);
 
   virtual LayerState GetLayerState(nsDisplayListBuilder* aBuilder,
                                    LayerManager* aManager,
@@ -3468,7 +3468,7 @@ public:
                                              const ContainerLayerParameters& aContainerParameters) MOZ_OVERRIDE;
 
 protected:
-  nsRefPtr<mozilla::gfx::vr::HMDInfo> mHMD;
+  nsRefPtr<mozilla::gfx::VRHMDInfo> mHMD;
 };
 
 #endif /*NSDISPLAYLIST_H_*/

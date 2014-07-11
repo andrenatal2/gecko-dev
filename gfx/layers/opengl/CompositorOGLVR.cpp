@@ -226,15 +226,15 @@ CompositorOGL::DrawVRDistortion(const gfx::Rect& aRect,
 
   gfx::IntSize size = surface->GetInitSize(); // XXX source->GetSize()
 
-  vr::HMDInfo* hmdInfo = vrEffect->mHMD;
-  vr::DistortionConstants shaderConstants;
+  VRHMDInfo* hmdInfo = vrEffect->mHMD;
+  VRDistortionConstants shaderConstants;
 
   if (hmdInfo->GetConfiguration() != mVR.mConfiguration) {
     for (uint32_t eye = 0; eye < 2; eye++) {
-      const gfx::vr::DistortionMesh& mesh = hmdInfo->GetDistortionMesh(eye);
+      const gfx::VRDistortionMesh& mesh = hmdInfo->GetDistortionMesh(eye);
       gl()->fBindBuffer(LOCAL_GL_ARRAY_BUFFER, mVR.mDistortionVertices[eye]);
       gl()->fBufferData(LOCAL_GL_ARRAY_BUFFER,
-                       mesh.mVertices.Length() * sizeof(gfx::vr::DistortionVertex),
+                       mesh.mVertices.Length() * sizeof(gfx::VRDistortionVertex),
                        mesh.mVertices.Elements(),
                        LOCAL_GL_STATIC_DRAW);
 
@@ -292,16 +292,16 @@ CompositorOGL::DrawVRDistortion(const gfx::Rect& aRect,
 
     gl()->fBindBuffer(LOCAL_GL_ARRAY_BUFFER, mVR.mDistortionVertices[eye]);
 
-    gl()->fVertexAttribPointer(mVR.mAPosition, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::vr::DistortionVertex),
-                               (void*) offsetof(gfx::vr::DistortionVertex, pos));
-    gl()->fVertexAttribPointer(mVR.mATexCoord0, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::vr::DistortionVertex),
-                               (void*) offsetof(gfx::vr::DistortionVertex, texR));
-    gl()->fVertexAttribPointer(mVR.mATexCoord1, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::vr::DistortionVertex),
-                               (void*) offsetof(gfx::vr::DistortionVertex, texG));
-    gl()->fVertexAttribPointer(mVR.mATexCoord2, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::vr::DistortionVertex),
-                               (void*) offsetof(gfx::vr::DistortionVertex, texB));
-    gl()->fVertexAttribPointer(mVR.mAGenericAttribs, 4, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::vr::DistortionVertex),
-                               (void*) offsetof(gfx::vr::DistortionVertex, genericAttribs));
+    gl()->fVertexAttribPointer(mVR.mAPosition, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::VRDistortionVertex),
+                               (void*) offsetof(gfx::VRDistortionVertex, pos));
+    gl()->fVertexAttribPointer(mVR.mATexCoord0, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::VRDistortionVertex),
+                               (void*) offsetof(gfx::VRDistortionVertex, texR));
+    gl()->fVertexAttribPointer(mVR.mATexCoord1, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::VRDistortionVertex),
+                               (void*) offsetof(gfx::VRDistortionVertex, texG));
+    gl()->fVertexAttribPointer(mVR.mATexCoord2, 2, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::VRDistortionVertex),
+                               (void*) offsetof(gfx::VRDistortionVertex, texB));
+    gl()->fVertexAttribPointer(mVR.mAGenericAttribs, 4, LOCAL_GL_FLOAT, LOCAL_GL_FALSE, sizeof(gfx::VRDistortionVertex),
+                               (void*) offsetof(gfx::VRDistortionVertex, genericAttribs));
 
     gl()->fBindBuffer(LOCAL_GL_ELEMENT_ARRAY_BUFFER, mVR.mDistortionIndices[eye]);
     gl()->fDrawElements(LOCAL_GL_TRIANGLES, mVR.mDistortionIndexCount[eye], LOCAL_GL_UNSIGNED_SHORT, 0);

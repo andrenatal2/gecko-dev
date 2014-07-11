@@ -292,7 +292,7 @@ template<class ContainerT> void
 ContainerRenderVR(ContainerT* aContainer,
                   LayerManagerComposite* aManager,
                   const nsIntRect& aClipRect,
-                  gfx::vr::HMDInfo* aHMD)
+                  gfx::VRHMDInfo* aHMD)
 {
   RefPtr<CompositingRenderTarget> surface;
 
@@ -405,7 +405,7 @@ ContainerPrepare(ContainerT* aContainer,
 {
   aContainer->mPrepared = MakeUnique<PreparedData>();
 
-  gfx::vr::HMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
+  gfx::VRHMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
   if (hmdInfo && hmdInfo->GetConfiguration().IsValid()) {
     // we're not going to do anything here; instead, we'll do it all in ContainerRender.
     // XXX fix this; we can win with the same optimizations.  Specifically, we
