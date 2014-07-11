@@ -74,9 +74,9 @@ struct DeviceAttachmentsD3D11
   RefPtr<ID3D11InputLayout> mVRDistortionInputLayout;
   RefPtr<ID3D11Buffer> mVRDistortionConstants;
 
-  typedef EnumeratedArray<vr::HMDType, vr::HMDType::NumHMDTypes, RefPtr<ID3D11VertexShader>>
+  typedef EnumeratedArray<VRHMDType, VRHMDType::NumHMDTypes, RefPtr<ID3D11VertexShader>>
           VRVertexShaderArray;
-  typedef EnumeratedArray<vr::HMDType, vr::HMDType::NumHMDTypes, RefPtr<ID3D11PixelShader>>
+  typedef EnumeratedArray<VRHMDType, VRHMDType::NumHMDTypes, RefPtr<ID3D11PixelShader>>
           VRPixelShaderArray;
 
   VRVertexShaderArray mVRDistortionVS;
@@ -84,7 +84,7 @@ struct DeviceAttachmentsD3D11
 
   // These will be created/filled in as needed during rendering whenever the configuration
   // changes.
-  vr::HMDConfiguration mVRConfiguration;
+  VRHMDConfiguration mVRConfiguration;
   RefPtr<ID3D11Buffer> mVRDistortionVertices[2]; // one for each eye
   RefPtr<ID3D11Buffer> mVRDistortionIndices[2];
   uint32_t mVRDistortionIndexCount[2];
@@ -316,7 +316,7 @@ CompositorD3D11::Initialize()
       return false;
     }
 
-    cBufferDesc.ByteWidth = sizeof(gfx::vr::DistortionConstants);
+    cBufferDesc.ByteWidth = sizeof(gfx::VRDistortionConstants);
     hr = mDevice->CreateBuffer(&cBufferDesc, nullptr, byRef(mAttachments->mVRDistortionConstants));
     if (FAILED(hr)) {
       return false;
@@ -616,8 +616,8 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
   TextureSourceD3D11* source = vrEffect->mTexture->AsSourceD3D11();
   gfx::IntSize size = vrEffect->mRenderTarget->GetSize(); // XXX source->GetSize()
 
-  vr::HMDInfo* hmdInfo = vrEffect->mHMD;
-  vr::DistortionConstants shaderConstants;
+  VRHMDInfo* hmdInfo = vrEffect->mHMD;
+  VRDistortionConstants shaderConstants;
 
   // do we need to recreate the VR buffers, since the config has changed?
   if (hmdInfo->GetConfiguration() != mAttachments->mVRConfiguration) {
@@ -627,10 +627,10 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
     // XXX as an optimization, we should really pack the indices and vertices for both eyes
     // into one buffer instead of needing one eye each.  Then we can just bind them once.
     for (uint32_t eye = 0; eye < 2; eye++) {
-      const gfx::vr::DistortionMesh& mesh = hmdInfo->GetDistortionMesh(eye);
+      const gfx::VRDistortionMesh& mesh = hmdInfo->GetDistortionMesh(eye);
 
       desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-      desc.ByteWidth = mesh.mVertices.Length() * sizeof(gfx::vr::DistortionVertex);
+      desc.ByteWidth = mesh.mVertices.Length() * sizeof(gfx::VRDistortionVertex);
       sdata.pSysMem = mesh.mVertices.Elements();
       
       hr = mDevice->CreateBuffer(&desc, &sdata, byRef(mAttachments->mVRDistortionVertices[eye]));
@@ -702,13 +702,13 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
     // XXX I really want to write a templated helper for these next 4 lines
     D3D11_MAPPED_SUBRESOURCE resource;
     mContext->Map(mAttachments->mVRDistortionConstants, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
-    *(gfx::vr::DistortionConstants*)resource.pData = shaderConstants;
+    *(gfx::VRDistortionConstants*)resource.pData = shaderConstants;
     mContext->Unmap(mAttachments->mVRDistortionConstants, 0);
 
     // XXX is there a better way to change a bunch of these things from what they were set to
     // in BeginFrame/etc?
     vbuffer = mAttachments->mVRDistortionVertices[eye];
-    vsize = sizeof(gfx::vr::DistortionVertex);
+    vsize = sizeof(gfx::VRDistortionVertex);
     voffset = 0;
     mContext->IASetVertexBuffers(0, 1, &vbuffer, &vsize, &voffset);
     mContext->IASetIndexBuffer(mAttachments->mVRDistortionIndices[eye], DXGI_FORMAT_R16_UINT, 0);
@@ -1151,7 +1151,7 @@ CompositorD3D11::CreateShaders()
   hr = mDevice->CreateVertexShader(OculusVRDistortionVS,
                                    sizeof(OculusVRDistortionVS),
                                    nullptr,
-                                   byRef(mAttachments->mVRDistortionVS[vr::HMDType::Oculus]));
+                                   byRef(mAttachments->mVRDistortionVS[VRHMDType::Oculus]));
   if (FAILED(hr)) {
     return false;
   }
@@ -1159,7 +1159,7 @@ CompositorD3D11::CreateShaders()
   hr = mDevice->CreatePixelShader(OculusVRDistortionPS,
                                   sizeof(OculusVRDistortionPS),
                                   nullptr,
-                                  byRef(mAttachments->mVRDistortionPS[vr::HMDType::Oculus]));
+                                  byRef(mAttachments->mVRDistortionPS[VRHMDType::Oculus]));
   if (FAILED(hr)) {
     return false;
   }

@@ -49,12 +49,6 @@ typedef std::vector<mozilla::layers::EditReply> EditReplyVector;
 using mozilla::layout::RenderFrameParent;
 
 namespace mozilla {
-namespace gfx {
-namespace vr {
-class HMDInfo;
-}
-}
-
 namespace layers {
 
 class PGrallocBufferParent;
@@ -360,7 +354,7 @@ LayerTransactionParent::RecvUpdate(const InfallibleTArray<Edit>& cset,
         containerLayer->SetPreScale(attrs.preXScale(), attrs.preYScale());
         containerLayer->SetInheritedScale(attrs.inheritedXScale(), attrs.inheritedYScale());
         containerLayer->SetBackgroundColor(attrs.backgroundColor().value());
-        containerLayer->SetVRHMDInfo(reinterpret_cast<mozilla::gfx::vr::HMDInfo*>(attrs.hmdInfo()));
+        containerLayer->SetVRHMDInfo(reinterpret_cast<mozilla::gfx::VRHMDInfo*>(attrs.hmdInfo()));
         break;
       }
       case Specific::TColorLayerAttributes: {

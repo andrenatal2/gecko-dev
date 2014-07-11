@@ -1813,8 +1813,8 @@ public:
   /**
    * VR
    */
-  void SetVRHMDInfo(gfx::vr::HMDInfo* aHMD) { mHMDInfo = aHMD; }
-  gfx::vr::HMDInfo* GetVRHMDInfo() { return mHMDInfo; }
+  void SetVRHMDInfo(gfx::VRHMDInfo* aHMD) { mHMDInfo = aHMD; }
+  gfx::VRHMDInfo* GetVRHMDInfo() { return mHMDInfo; }
 
 protected:
   friend class ReadbackProcessor;
@@ -1863,7 +1863,7 @@ protected:
   bool mUseIntermediateSurface;
   bool mSupportsComponentAlphaChildren;
   bool mMayHaveReadbackChild;
-  nsRefPtr<gfx::vr::HMDInfo> mHMDInfo;
+  nsRefPtr<gfx::VRHMDInfo> mHMDInfo;
 };
 
 /**

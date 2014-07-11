@@ -163,26 +163,25 @@ static bool InitializeOculusCAPI()
 } // anonymous namespace
 
 using namespace mozilla::gfx;
-using namespace mozilla::gfx::vr;
 
 static bool sOculusInitialized = false;
 
-class HMDInfoOculus : public HMDInfo {
-  friend class OculusHMDManager;
+class HMDInfoOculus : public VRHMDInfo {
+  friend class VRHMDManagerOculus;
 public:
   HMDInfoOculus(ovrHmd aHMD);
   virtual ~HMDInfoOculus() { Destroy(); }
 
-  bool SetFOV(const FieldOfView& aFOVLeft, const FieldOfView& aFOVRight) MOZ_OVERRIDE;
+  bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight) MOZ_OVERRIDE;
 
   bool StartSensorTracking() MOZ_OVERRIDE;
-  HMDSensorState GetSensorState(double timeOffset) MOZ_OVERRIDE;
+  VRHMDSensorState GetSensorState(double timeOffset) MOZ_OVERRIDE;
   void StopSensorTracking() MOZ_OVERRIDE;
 
   void FillDistortionConstants(uint32_t whichEye,
                                const IntSize& textureSize, const IntRect& eyeViewport,
                                const Size& destViewport, const Rect& destRect,
-                               DistortionConstants& values) MOZ_OVERRIDE;
+                               VRDistortionConstants& values) MOZ_OVERRIDE;
 
 protected:
   ovrHmd mHMD;
@@ -193,7 +192,7 @@ protected:
 };
 
 static ovrFovPort
-ToFovPort(const FieldOfView& aFOV)
+ToFovPort(const VRFieldOfView& aFOV)
 {
   ovrFovPort fovPort;
   fovPort.LeftTan = tan(aFOV.leftDegrees * M_PI / 180.0);
@@ -203,10 +202,10 @@ ToFovPort(const FieldOfView& aFOV)
   return fovPort;
 }
 
-static FieldOfView
+static VRFieldOfView
 FromFovPort(const ovrFovPort& aFOV)
 {
-  FieldOfView fovInfo;
+  VRFieldOfView fovInfo;
   fovInfo.leftDegrees = atan(aFOV.LeftTan) * 180.0 / M_PI;
   fovInfo.rightDegrees = atan(aFOV.RightTan) * 180.0 / M_PI;
   fovInfo.upDegrees = atan(aFOV.UpTan) * 180.0 / M_PI;
@@ -215,7 +214,7 @@ FromFovPort(const ovrFovPort& aFOV)
 }
 
 HMDInfoOculus::HMDInfoOculus(ovrHmd aHMD)
-  : HMDInfo(HMDType::Oculus)
+  : VRHMDInfo(VRHMDType::Oculus)
   , mHMD(aHMD)
   , mStartCount(0)
 {
@@ -262,7 +261,7 @@ HMDInfoOculus::Destroy()
 }
 
 bool
-HMDInfoOculus::SetFOV(const FieldOfView& aFOVLeft, const FieldOfView& aFOVRight)
+HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight)
 {
   mEyeFOV[Eye_Left] = aFOVLeft;
   mEyeFOV[Eye_Right] = aFOVRight;
@@ -298,8 +297,8 @@ HMDInfoOculus::SetFOV(const FieldOfView& aFOVLeft, const FieldOfView& aFOVRight)
     mDistortionMesh[eye].mIndices.SetLength(mesh.IndexCount);
 
     ovrDistortionVertex *srcv = mesh.pVertexData;
-    DistortionVertex *destv = mDistortionMesh[eye].mVertices.Elements();
-    memset(destv, 0, mesh.VertexCount * sizeof(DistortionVertex));
+    VRDistortionVertex *destv = mDistortionMesh[eye].mVertices.Elements();
+    memset(destv, 0, mesh.VertexCount * sizeof(VRDistortionVertex));
     for (uint32_t i = 0; i < mesh.VertexCount; ++i) {
       destv[i].pos[0] = srcv[i].Pos.x;
       destv[i].pos[1] = srcv[i].Pos.y;
@@ -335,7 +334,7 @@ HMDInfoOculus::FillDistortionConstants(uint32_t whichEye,
                                        const IntRect& eyeViewport,
                                        const Size& destViewport,
                                        const Rect& destRect,
-                                       DistortionConstants& values)
+                                       VRDistortionConstants& values)
 {
   ovrSizei texSize = { textureSize.width, textureSize.height };
   ovrRecti eyePort = { { eyeViewport.x, eyeViewport.y }, { eyeViewport.width, eyeViewport.height } };
@@ -387,10 +386,10 @@ HMDInfoOculus::StopSensorTracking()
   }
 }
 
-HMDSensorState
+VRHMDSensorState
 HMDInfoOculus::GetSensorState(double timeOffset)
 {
-  HMDSensorState result;
+  VRHMDSensorState result;
   result.Clear();
 
   // XXX this is the wrong time base for timeOffset; we need to figure out how to synchronize
@@ -439,7 +438,7 @@ HMDInfoOculus::GetSensorState(double timeOffset)
 static nsTArray<RefPtr<HMDInfoOculus> > sOculusHMDs;
 
 bool
-OculusHMDManager::Init()
+VRHMDManagerOculus::Init()
 {
   if (sOculusInitialized)
     return true;
@@ -467,7 +466,7 @@ OculusHMDManager::Init()
 }
 
 void
-OculusHMDManager::Destroy()
+VRHMDManagerOculus::Destroy()
 {
   if (!sOculusInitialized)
     return;
@@ -482,7 +481,7 @@ OculusHMDManager::Destroy()
 }
 
 void
-OculusHMDManager::GetOculusHMDs(nsTArray<RefPtr<HMDInfo> >& aHMDResult)
+VRHMDManagerOculus::GetOculusHMDs(nsTArray<RefPtr<VRHMDInfo> >& aHMDResult)
 {
   Init();
   for (size_t i = 0; i < sOculusHMDs.Length(); ++i) {
