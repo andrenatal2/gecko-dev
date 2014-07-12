@@ -10,6 +10,8 @@
 #include "mozilla/gfx/2D.h"
 #include "mozilla/EnumeratedArray.h"
 
+#include "nsIScreen.h"
+
 namespace mozilla {
 namespace gfx {
 
@@ -169,14 +171,11 @@ public:
 
   virtual const VRDistortionMesh& GetDistortionMesh(uint32_t whichEye) const { return mDistortionMesh[whichEye]; }
 
-  virtual bool GetReferenceScreenRect(IntRect& aRect) {
-    if (mHasScreenRect)
-      aRect = mScreenRect;
-    return mHasScreenRect;
-  }
+  // The nsIScreen that represents this device
+  virtual nsIScreen* GetScreen() { return mScreen; }
 
 protected:
-  VRHMDInfo(VRHMDType aType) : mType(aType), mHasScreenRect(false) {}
+  VRHMDInfo(VRHMDType aType) : mType(aType) {}
 
   VRHMDType mType;
   VRHMDConfiguration mConfiguration;
@@ -190,8 +189,7 @@ protected:
   VRFieldOfView mRecommendedEyeFOV[NumEyes];
   VRFieldOfView mMaximumEyeFOV[NumEyes];
 
-  bool mHasScreenRect;
-  IntRect mScreenRect;
+  nsCOMPtr<nsIScreen> mScreen;
 };
 
 class VRHMDManagerOculus {

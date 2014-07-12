@@ -688,7 +688,7 @@ NS_IMETHODIMP nsBaseWidget::HideWindowChrome(bool aShouldHide)
 // Put the window into full-screen mode
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen, nsIntRect* aReferenceRect)
+NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen, nsIScreen* aScreen)
 {
   HideWindowChrome(aFullScreen);
 
@@ -708,16 +708,9 @@ NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen, nsIntRect* aReferen
     screenManager = do_GetService("@mozilla.org/gfx/screenmanager;1");
     NS_ASSERTION(screenManager, "Unable to grab screenManager.");
     if (screenManager) {
-      nsCOMPtr<nsIScreen> screen;
-      nsIntRect *r = aReferenceRect ? aReferenceRect : mOriginalBounds;
-      screenManager->ScreenForRect(r->x,
-                                   r->y,
-                                   r->width,
-                                   r->height,
-                                   getter_AddRefs(screen));
-
-      if (aReferenceRect && !screen) {
-        NS_WARNING("Failed to MakeFullScreen with reference rect, using window");
+      nsCOMPtr<nsIScreen> screen = aScreen;
+      if (!screen) {
+        // no screen was passed in, use the one that the window is on
         screenManager->ScreenForRect(mOriginalBounds->x,
                                      mOriginalBounds->y,
                                      mOriginalBounds->width,
@@ -728,6 +721,7 @@ NS_IMETHODIMP nsBaseWidget::MakeFullScreen(bool aFullScreen, nsIntRect* aReferen
       if (screen) {
         int32_t left, top, width, height;
         if (NS_SUCCEEDED(screen->GetRectDisplayPix(&left, &top, &width, &height))) {
+          printf_stderr("============ RESIZING TO %d %d %d %d\n", left, top, width, height);
           Resize(left, top, width, height, true);
         }
       }
