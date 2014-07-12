@@ -6072,13 +6072,11 @@ nsGlobalWindow::SetFullScreenInternal(bool aFullScreen, bool aRequireTrust, gfx:
   if (!Preferences::GetBool("full-screen-api.ignore-widgets", false)) {
     nsCOMPtr<nsIWidget> widget = GetMainWidget();
     if (widget) {
-      gfx::IntRect screenRect;
-      if (aHMD && aHMD->GetReferenceScreenRect(screenRect)) {
-        nsIntRect r(screenRect.x, screenRect.y, screenRect.width, screenRect.height);
-        widget->MakeFullScreen(aFullScreen, &r);
-      } else {
-        widget->MakeFullScreen(aFullScreen);
+      nsCOMPtr<nsIScreen> screen;
+      if (aHMD) {
+        screen = aHMD->GetScreen();
       }
+      widget->MakeFullScreen(aFullScreen, screen);
     }
   }
 
