@@ -10,7 +10,9 @@
 #include "gfxVR.h"
 #include "ovr_capi_dynamic.h"
 
-#include "nsIWidget.h"   // for nsIWidget::DefaultScaleOverride
+#include "nsServiceManagerUtils.h"
+#include "nsIScreenManager.h"
+
 #ifdef XP_WIN
 #include "gfxWindowsPlatform.h" // for gfxWindowsPlatform::GetDPIScale
 #endif
@@ -235,20 +237,12 @@ HMDInfoOculus::HMDInfoOculus(ovrHmd aHMD)
 
   SetFOV(mRecommendedEyeFOV[Eye_Left], mRecommendedEyeFOV[Eye_Right]);
 
-  mHasScreenRect = true;
-  // XXX sic "WindowsPos"
-  // This needs to be in "logical" screen pixels.
-  mScreenRect = IntRect(desc.WindowsPos.x, desc.WindowsPos.y,
-                        desc.Resolution.w, desc.Resolution.h);
-  double scaleFactor = nsIWidget::DefaultScaleOverride();
-  if (scaleFactor <= 0.0) {
-#ifdef XP_WIN
-    scaleFactor = gfxWindowsPlatform::GetPlatform()->GetDPIScale();
-#else
-    scaleFactor = 1.0;
-#endif
+  nsCOMPtr<nsIScreenManager> screenmgr = do_GetService("@mozilla.org/gfx/screenmanager;1");
+  if (screenmgr) {
+    screenmgr->ScreenForRect(desc.WindowsPos.x, desc.WindowsPos.y,
+                             desc.Resolution.w, desc.Resolution.h,
+                             getter_AddRefs(mScreen));
   }
-  mScreenRect.ScaleRoundIn(1.0 / scaleFactor);
 }
 
 void

@@ -1269,7 +1269,7 @@ void nsCocoaWindow::EnteredFullScreen(bool aFullScreen)
   DispatchSizeModeEvent();
 }
 
-NS_METHOD nsCocoaWindow::MakeFullScreen(bool aFullScreen, nsIntRect* aReferenceRect)
+NS_METHOD nsCocoaWindow::MakeFullScreen(bool aFullScreen, nsIScreen* aTargetScreen)
 {
   NS_OBJC_BEGIN_TRY_ABORT_BLOCK_NSRESULT;
 
