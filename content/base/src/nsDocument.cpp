@@ -10912,8 +10912,11 @@ nsDocument::CleanupFullscreenState()
     if (top) {
       EventStateManager::SetFullScreenState(top, false);
 
-      // Remove any VR state properties
+      // Clean up any VR state properties
       top->DeleteProperty(nsGkAtoms::vr_state);
+      if (mPresShell) {
+        mPresShell->SetVRRendering(false);
+      }
     }
     mFullScreenStack.Clear();
   }
@@ -10956,6 +10959,9 @@ nsDocument::FullScreenStackPop()
 
   // Remove any VR state properties
   top->DeleteProperty(nsGkAtoms::vr_state);
+  if (mPresShell) {
+    mPresShell->SetVRRendering(false);
+  }
 
   // Remove top element. Note the remaining top element in the stack
   // will not have full-screen style bits set, so we will need to restore
@@ -11175,6 +11181,9 @@ nsDocument::RequestFullScreen(Element* aElement,
     aElement->SetProperty(nsGkAtoms::vr_state, hmdRef.forget().take(),
                           ReleaseHMDInfoRef,
                           true);
+    if (mPresShell) {
+      mPresShell->SetVRRendering(true);
+    }
   }
 
   // Set the full-screen element. This sets the full-screen style on the

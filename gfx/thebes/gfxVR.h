@@ -153,9 +153,13 @@ public:
   virtual bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight) = 0;
   const VRFieldOfView& GetEyeFOV(uint32_t whichEye)  { return mEyeFOV[whichEye]; }
 
-  /* Suggested resolution for rendering a single eye.  Assumption is that side-by-side left/right rendering will be 2x of this size. */
+  /* Suggested resolution for rendering a single eye.
+   * Assumption is that left/right rendering will be 2x of this size.
+   * XXX fix this for vertical displays
+   */
   const IntSize& SuggestedEyeResolution() const { return mEyeResolution; }
   const Point3D& GetEyeTranslation(uint32_t whichEye) const { return mEyeTranslation[whichEye]; }
+  const Matrix4x4& GetEyeProjectionMatrix(uint32_t whichEye) const { return mEyeProjectionMatrix[whichEye]; }
 
   virtual uint32_t GetSupportedSensorStateBits() { return mSupportedSensorBits; }
   virtual bool StartSensorTracking() = 0;
@@ -183,6 +187,7 @@ protected:
   VRFieldOfView mEyeFOV[NumEyes];
   IntSize mEyeResolution;
   Point3D mEyeTranslation[NumEyes];
+  Matrix4x4 mEyeProjectionMatrix[NumEyes];
   VRDistortionMesh mDistortionMesh[NumEyes];
   uint32_t mSupportedSensorBits;
 

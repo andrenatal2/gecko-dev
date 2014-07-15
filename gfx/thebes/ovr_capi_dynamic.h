@@ -188,6 +188,8 @@ typedef void (*pfn_ovrHmd_EndFrameTiming)(ovrHmd hmd);
 typedef void (*pfn_ovrHmd_ResetFrameTiming)(ovrHmd hmd, unsigned int frameIndex, bool vsync);
 typedef ovrPosef (*pfn_ovrHmd_GetEyePose)(ovrHmd hmd, ovrEyeType eye);
 typedef void (*pfn_ovrHmd_GetEyeTimewarpMatrices)(ovrHmd hmd, ovrEyeType eye, ovrPosef renderPose, ovrMatrix4f twmOut[2]);
+typedef ovrMatrix4f (*pfn_ovrMatrix4f_Projection) (ovrFovPort fov, float znear, float zfar, ovrBool rightHanded );
+typedef ovrMatrix4f (*pfn_ovrMatrix4f_OrthoSubProjection) (ovrFovPort fov, ovrVector2f orthoScale, float orthoDistance, float eyeViewAdjustX);
 typedef double (*pfn_ovr_GetTimeInSeconds)();
 
 #ifdef __cplusplus 

@@ -90,6 +90,34 @@ struct DeviceAttachmentsD3D11
   uint32_t mVRDistortionIndexCount[2];
 };
 
+struct AutoBeginEndEvent {
+#ifdef DEBUG
+  AutoBeginEndEvent(ID3DUserDefinedAnnotation *anno, const char *fmt, ...)
+    : mDebug(anno)
+  {
+    va_list ap;
+    nsString str;
+
+    va_start(ap, fmt);
+    str.AppendPrintf(fmt, ap);
+    va_end(ap);
+
+    if (mDebug)
+      mDebug->BeginEvent(str.BeginReading());
+  }
+
+  ~AutoBeginEndEvent()
+  {
+    if (mDebug)
+      mDebug->EndEvent();
+  }
+
+  ID3DUserDefinedAnnotation *mDebug;
+#else
+  AutoBeginEndEvent(ID3DUserDefinedAnnotation *, const char *, ...) {}
+#endif
+};
+
 CompositorD3D11::CompositorD3D11(nsIWidget* aWidget)
   : mAttachments(nullptr)
   , mWidget(aWidget)
@@ -122,6 +150,34 @@ CompositorD3D11::~CompositorD3D11()
       delete attachments;
     }
   }
+}
+
+static void
+printf_matrix_44(const char *s, float *m)
+{
+  printf_stderr("%s:\n", s);
+  for (int i = 0; i < 4; ++i) {
+    printf_stderr("%c[ %10.8f %10.8f %10.8f %10.8f ]%c\n",
+                  i == 0 ? '[' : ' ',
+                  m[i*4+0], m[i*4+1], m[i*4+2], m[i*4+3],
+                  i == 3 ? ']' : ' ');
+  }
+}
+
+static void
+printf_rect(const char *s, const gfx::Rect& r)
+{
+  printf_stderr("%s: %.2f,%.2f %.2fx%.2f\n", s, r.x, r.y, r.width, r.height);
+}
+
+static void
+printf_matrix(const char *s, const gfx::Matrix4x4& m)
+{
+  printf_stderr("%s:\n", s);
+  printf_stderr("[[ %10.8f %10.8f %10.8f %10.8f ]\n", m._11, m._12, m._13, m._14);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._21, m._22, m._23, m._24);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._31, m._32, m._33, m._34);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]]\n", m._41, m._42, m._43, m._44);
 }
 
 bool
@@ -329,6 +385,10 @@ CompositorD3D11::Initialize()
   mDevice->QueryInterface(dxgiDevice.StartAssignment());
   dxgiDevice->GetAdapter(getter_AddRefs(dxgiAdapter));
 
+#ifdef DEBUG
+  mDevice->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), reinterpret_cast<void**>(mDebugAnnotations.StartAssignment()));
+#endif
+
 #ifdef MOZ_METRO
   if (IsRunningInWindowsMetro()) {
     nsRefPtr<IDXGIFactory2> dxgiFactory;
@@ -520,6 +580,55 @@ CompositorD3D11::CreateRenderTargetFromSource(const gfx::IntRect &aRect,
 }
 
 void
+CompositorD3D11::PushRenderTarget(CompositingRenderTarget* aRenderTarget)
+{
+  CompositingRenderTargetD3D11* newRT =
+    static_cast<CompositingRenderTargetD3D11*>(aRenderTarget);
+
+  mRenderTargetStack.AppendElement();
+  SetRenderTarget(aRenderTarget);
+  PrepareViewport(gfx::IntRect(gfx::IntPoint(0, 0), newRT->GetSize()),
+                  gfx::Matrix());
+}
+
+void
+CompositorD3D11::PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                  const gfx::IntRect& aRect,
+                                  const gfx::Matrix& aWorldTransform,
+                                  const gfx::Matrix4x4& aProjectionMatrix)
+{
+  // need a new element, which will be filled in by SetRenderTarget and
+  // PrepareViewport3D
+  mRenderTargetStack.AppendElement();
+
+  SetRenderTarget(aRenderTarget);
+  PrepareViewport3D(aRect, aWorldTransform, aProjectionMatrix);
+}
+
+void
+CompositorD3D11::PopRenderTarget()
+{
+  MOZ_ASSERT(mRenderTargetStack.Length() > 0);
+
+  // nuke the last element
+  mRenderTargetStack.SetLength(mRenderTargetStack.Length() - 1);
+
+  if (mRenderTargetStack.Length() > 0) {
+    RenderTargetStackEntry& entry(mRenderTargetStack.LastElement());
+    SetRenderTarget(entry.mTarget);
+    if (entry.mIs3D) {
+      PrepareViewport3D(entry.mRect, entry.mWorldTransform, entry.mProjectionMatrix);
+    } else {
+      PrepareViewport(entry.mRect, entry.mWorldTransform);
+    }
+  } else {
+    // going back to default render target
+    SetRenderTarget(mDefaultRT);
+    PrepareViewport(gfx::IntRect(gfx::IntPoint(0, 0), mDefaultRT->GetSize()), gfx::Matrix());
+  }
+}
+
+void
 CompositorD3D11::SetRenderTarget(CompositingRenderTarget* aRenderTarget)
 {
   MOZ_ASSERT(aRenderTarget);
@@ -528,7 +637,11 @@ CompositorD3D11::SetRenderTarget(CompositingRenderTarget* aRenderTarget)
   ID3D11RenderTargetView* view = newRT->mRTView;
   mCurrentRT = newRT;
   mContext->OMSetRenderTargets(1, &view, nullptr);
-  PrepareViewport(newRT->GetSize(), gfx::Matrix());
+
+  // update the current top render target
+  if (mRenderTargetStack.Length() > 0) {
+    mRenderTargetStack.LastElement().mTarget = aRenderTarget;
+  }
 }
 
 void
@@ -561,6 +674,8 @@ CompositorD3D11::SetPSForEffect(Effect* aEffect, MaskType aMaskType, gfx::Surfac
 void
 CompositorD3D11::ClearRect(const gfx::Rect& aRect)
 {
+  AutoBeginEndEvent event(mDebugAnnotations, "ClearRect");
+
   mContext->OMSetBlendState(mAttachments->mDisabledBlendState, sBlendFactor, 0xFFFFFFFF);
 
   Matrix4x4 identity;
@@ -600,6 +715,8 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
                                   gfx::Float aOpacity,
                                   const gfx::Matrix4x4& aTransform)
 {
+  AutoBeginEndEvent drawQuadEvent(mDebugAnnotations, "DrawVRDistortion");
+
   MOZ_ASSERT(aEffectChain.mPrimaryEffect->mType == EffectTypes::VR_DISTORTION);
 
   if (aEffectChain.mSecondaryEffects[EffectTypes::MASK] ||
@@ -657,10 +774,10 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
 
   // XXX do I need to set a scissor rect? Is this the right scissor rect?
   D3D11_RECT scissor;
-  scissor.left = aClipRect.x;
-  scissor.right = aClipRect.XMost();
-  scissor.top = aClipRect.y;
-  scissor.bottom = aClipRect.YMost();
+  scissor.left = mViewport.x + aClipRect.x;
+  scissor.right = mViewport.x + aClipRect.XMost();
+  scissor.top = mViewport.y + aClipRect.y;
+  scissor.bottom = mViewport.y + aClipRect.YMost();
   mContext->RSSetScissorRects(1, &scissor);
 
   // Triangle lists and same layout for both eyes
@@ -742,6 +859,8 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
     return;
   }
 
+  AutoBeginEndEvent drawQuadEvent(mDebugAnnotations, "DrawQuad");
+
   memcpy(&mVSConstants.layerTransform, &aTransform._11, 64);
   IntPoint origin = mCurrentRT->GetOrigin();
   mVSConstants.renderTargetOffset[0] = origin.x;
@@ -786,10 +905,10 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
 
 
   D3D11_RECT scissor;
-  scissor.left = aClipRect.x;
-  scissor.right = aClipRect.XMost();
-  scissor.top = aClipRect.y;
-  scissor.bottom = aClipRect.YMost();
+  scissor.left = mViewport.x + aClipRect.x;
+  scissor.right = mViewport.x + aClipRect.XMost();
+  scissor.top = mViewport.y + aClipRect.y;
+  scissor.bottom = mViewport.y + aClipRect.YMost();
   mContext->RSSetScissorRects(1, &scissor);
   mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
   mContext->VSSetShader(mAttachments->mVSQuadShader[maskType], nullptr, 0);
@@ -913,6 +1032,8 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
     NS_WARNING("Unknown shader type");
     return;
   }
+
+  //printf_stderr("DrawQuad -- target: %p\n", mCurrentRT.get());
   UpdateConstantBuffers();
 
   mContext->Draw(4, 0);
@@ -972,6 +1093,7 @@ CompositorD3D11::BeginFrame(const nsIntRegion& aInvalidRegion,
     scissor.right = mSize.width;
     scissor.bottom = mSize.height;
   }
+
   mContext->RSSetScissorRects(1, &scissor);
 
   FLOAT black[] = { 0, 0, 0, 0 };
@@ -981,6 +1103,7 @@ CompositorD3D11::BeginFrame(const nsIntRegion& aInvalidRegion,
   mContext->RSSetState(mAttachments->mRasterizerState);
 
   SetRenderTarget(mDefaultRT);
+  PrepareViewport(gfx::IntRect(gfx::IntPoint(0, 0), mDefaultRT->GetSize()), gfx::Matrix());
 }
 
 void
@@ -1002,16 +1125,18 @@ CompositorD3D11::EndFrame()
 }
 
 void
-CompositorD3D11::PrepareViewport(const gfx::IntSize& aSize,
+CompositorD3D11::PrepareViewport(const gfx::IntRect& aRect,
                                  const gfx::Matrix& aWorldTransform)
 {
+  mViewport = aRect;
+
   D3D11_VIEWPORT viewport;
   viewport.MaxDepth = 1.0f;
   viewport.MinDepth = 0.0f;
-  viewport.Width = aSize.width;
-  viewport.Height = aSize.height;
-  viewport.TopLeftX = 0;
-  viewport.TopLeftY = 0;
+  viewport.Width = aRect.width;
+  viewport.Height = aRect.height;
+  viewport.TopLeftX = aRect.x;
+  viewport.TopLeftY = aRect.y;
 
   mContext->RSSetViewports(1, &viewport);
 
@@ -1020,7 +1145,7 @@ CompositorD3D11::PrepareViewport(const gfx::IntSize& aSize,
   // This view matrix translates coordinates from 0..width and 0..height to
   // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
   viewMatrix.Translate(-1.0, 1.0);
-  viewMatrix.Scale(2.0f / float(aSize.width), 2.0f / float(aSize.height));
+  viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
   viewMatrix.Scale(1.0f, -1.0f);
 
   viewMatrix = aWorldTransform * viewMatrix;
@@ -1029,6 +1154,58 @@ CompositorD3D11::PrepareViewport(const gfx::IntSize& aSize,
   projection._33 = 0.0f;
 
   memcpy(&mVSConstants.projection, &projection, sizeof(mVSConstants.projection));
+
+  if (mRenderTargetStack.Length() > 0) {
+    UpdateTopRenderTargetStackViewport(aRect, aWorldTransform);
+  }
+}
+
+void
+CompositorD3D11::PrepareViewport3D(const gfx::IntRect& aRect,
+                                   const gfx::Matrix& aWorldTransform,
+                                   const gfx::Matrix4x4& aProjection)
+{
+  mViewport = aRect;
+
+  D3D11_VIEWPORT viewport;
+  viewport.MaxDepth = 1.0f;
+  viewport.MinDepth = 0.0f;
+  viewport.Width = aRect.width;
+  viewport.Height = aRect.height;
+  viewport.TopLeftX = aRect.x;
+  viewport.TopLeftY = aRect.y;
+
+  mContext->RSSetViewports(1, &viewport);
+
+  // This view matrix translates coordinates from 0..width and 0..height to
+  // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
+  // XXX fix this depth hacking with a css property!
+  // We also fix the depth to be from max(width,height)/2..-max(width,height)/2 * 10
+  // This is totally arbitrary and we may as well just pick arbitrary values
+  float dimMax = std::max(aRect.width, aRect.height) * 10;
+  Matrix4x4 viewMatrix;
+  viewMatrix.Translate(-1.0, 1.0, 0.5);
+  viewMatrix.Scale(2.0f / float(aRect.width),
+                   -2.0f / float(aRect.height),
+                   -4.0f / dimMax);
+
+  //printf("PrepareViewport3D viewMatrix dimMax: %f\n", dimMax);
+  //printf_matrix("PrepareViewport3D viewMatrix", viewMatrix);
+  //if (!aWorldTransform.IsIdentity()) printf_matrix("PrepareViewport3D worldTransform", Matrix4x4::From2D(aWorldTransform));
+
+  viewMatrix = Matrix4x4::From2D(aWorldTransform) * viewMatrix;
+
+  //if (!aWorldTransform.IsIdentity()) printf_matrix("PrepareViewport3D viewMatrix(2)", viewMatrix);
+
+  Matrix4x4 projection = viewMatrix * aProjection;
+
+  //printf_matrix("PrepareViewport3D final projection", projection);
+
+  memcpy(&mVSConstants.projection, &projection, sizeof(mVSConstants.projection));
+
+  if (mRenderTargetStack.Length() > 0) {
+    UpdateTopRenderTargetStackViewport(aRect, aWorldTransform, aProjection);
+  }
 }
 
 void
@@ -1170,6 +1347,18 @@ CompositorD3D11::CreateShaders()
 void
 CompositorD3D11::UpdateConstantBuffers()
 {
+#if 0
+  printf_stderr("==== constant buffers update; VS: ====\n");
+  printf_matrix_44("layerTransform", &mVSConstants.layerTransform[0][0]);
+  printf_matrix_44("projection", &mVSConstants.projection[0][0]);
+  printf_stderr("renderTargetOffset %.2f %.2f %.2f %.2f\n", mVSConstants.renderTargetOffset[0], mVSConstants.renderTargetOffset[1], mVSConstants.renderTargetOffset[2], mVSConstants.renderTargetOffset[3]);
+  printf_rect("textureCoords", mVSConstants.textureCoords);
+  printf_rect("layerQuad", mVSConstants.layerQuad);
+  printf_rect("maskQuad", mVSConstants.maskQuad);
+
+  printf_stderr("====\n");
+#endif
+
   D3D11_MAPPED_SUBRESOURCE resource;
   mContext->Map(mAttachments->mVSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &resource);
   *(VertexShaderConstants*)resource.pData = mVSConstants;

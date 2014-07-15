@@ -118,6 +118,33 @@ BasicCompositor::SupportsEffect(EffectTypes aEffect)
   return static_cast<EffectTypes>(aEffect) != EffectTypes::YCBCR;
 }
 
+void
+BasicCompositor::PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                  const gfx::IntRect& aRect,
+                                  const gfx::Matrix& aWorldTransform,
+                                  const gfx::Matrix4x4& aProjectionMatrix)
+{
+  PushRenderTarget(aRenderTarget);
+}
+
+void
+BasicCompositor::PushRenderTarget(CompositingRenderTarget* aRenderTarget)
+{
+  mRenderTargetStack.AppendElement();
+  SetRenderTarget(aRenderTarget);
+}
+
+void
+BasicCompositor::PopRenderTarget()
+{
+  MOZ_ASSERT(mRenderTargetStack.Length() > 1);
+  // nuke the last element
+  mRenderTargetStack.SetLength(mRenderTargetStack.Length() - 1);
+
+  RenderTargetStackEntry& entry(mRenderTargetStack.LastElement());
+  SetRenderTarget(entry.mTarget);
+}
+
 static void
 DrawSurfaceWithTextureCoords(DrawTarget *aDest,
                              const gfx::Rect& aDestRect,
@@ -428,6 +455,9 @@ BasicCompositor::BeginFrame(const nsIntRegion& aInvalidRegion,
     return;
   }
 
+  // clear the render target stack
+  mRenderTargetStack.Clear();
+
   // Setup an intermediate render target to buffer all compositing. We will
   // copy this into mDrawTarget (the widget), and/or mTarget in EndFrame()
   RefPtr<CompositingRenderTarget> target = CreateRenderTarget(mInvalidRect, INIT_MODE_CLEAR);
@@ -437,7 +467,8 @@ BasicCompositor::BeginFrame(const nsIntRegion& aInvalidRegion,
     }
     return;
   }
-  SetRenderTarget(target);
+
+  PushRenderTarget(target);
 
   // We only allocate a surface sized to the invalidated region, so we need to
   // translate future coordinates.
@@ -499,6 +530,9 @@ BasicCompositor::EndFrame()
     mWidget->EndRemoteDrawing();
   }
 
+  MOZ_ASSERT(mRenderTargetStack.Length() == 1, "EndFrame with something still on the render target stack!");
+  mRenderTargetStack.Clear();
+
   mDrawTarget = nullptr;
   mRenderTarget = nullptr;
 }
@@ -510,6 +544,7 @@ BasicCompositor::AbortFrame()
   mRenderTarget->mDrawTarget->PopClip();
   mDrawTarget = nullptr;
   mRenderTarget = nullptr;
+  mRenderTargetStack.Clear();
 }
 
 }

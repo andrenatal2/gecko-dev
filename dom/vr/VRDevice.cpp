@@ -9,6 +9,9 @@
 #include "mozilla/dom/VRDeviceBinding.h"
 #include "mozilla/dom/ElementBinding.h"
 #include "VRDevice.h"
+#include "nsIFrame.h"
+#include "nsView.h"
+#include "nsViewManager.h"
 
 using namespace mozilla::gfx;
 
@@ -59,15 +62,22 @@ void
 HMDVRDevice::XxxToggleElementVR(Element& aElement)
 {
   VRHMDInfo* hmdPtr = static_cast<VRHMDInfo*>(aElement.GetProperty(nsGkAtoms::vr_state));
+  bool enterVR;
   if (hmdPtr) {
     aElement.DeleteProperty(nsGkAtoms::vr_state);
-    return;
+    enterVR = false;
+  } else {
+    RefPtr<VRHMDInfo> hmdRef = mHMD;
+    aElement.SetProperty(nsGkAtoms::vr_state, hmdRef.forget().drop(),
+                         ReleaseHMDInfoRef,
+                         true);
+    enterVR = true;
   }
 
-  RefPtr<VRHMDInfo> hmdRef = mHMD;
-  aElement.SetProperty(nsGkAtoms::vr_state, hmdRef.forget().drop(),
-                       ReleaseHMDInfoRef,
-                       true);
+  nsIFrame *f = aElement.GetPrimaryFrame();
+  if (f) {
+    f->PresContext()->GetPresShell()->SetVRRendering(enterVR);
+  }
 }
 
 } // namespace dom
