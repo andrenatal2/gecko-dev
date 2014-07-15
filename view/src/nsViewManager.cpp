@@ -184,12 +184,23 @@ void nsViewManager::DoSetWindowDimensions(nscoord aWidth, nscoord aHeight)
 {
   nsRect oldDim = mRootView->GetDimensions();
   nsRect newDim(0, 0, aWidth, aHeight);
+
+  // if the content is VR, then whatever dimension is coming in, we need to
+  // halve it.
+  // XXX assume half by with right now, but we should have a way to split
+  // by height, too
+  if (mVRContent) {
+    newDim.width = newDim.width / 2;
+  }
+
+  printf_stderr("DoSetWindowDimensions %d %d, actually setting %d %d\n", aWidth, aHeight, newDim.width, newDim.height);
+
   // We care about resizes even when one dimension is already zero.
   if (!oldDim.IsEqualEdges(newDim)) {
     // Don't resize the widget. It is already being set elsewhere.
     mRootView->SetDimensions(newDim, true, false);
     if (mPresShell)
-      mPresShell->ResizeReflow(aWidth, aHeight);
+      mPresShell->ResizeReflow(newDim.width, newDim.height);
   }
 }
 
@@ -1136,4 +1147,24 @@ nsViewManager::InvalidateHierarchy()
       mRootViewManager = this;
     }
   }
+}
+
+void
+nsViewManager::SetVRContent(bool aVR)
+{
+  if (mVRContent == aVR)
+    return;
+
+  mVRContent = aVR;
+
+  nsRect oldDim = mRootView->GetDimensions();
+  nsRect newDim = oldDim;
+
+  // If it's not VR, make sure we reset to the proper size here.
+  // XXX same thing here -- we should have a way to split by height
+  if (!mVRContent) {
+    printf_stderr("SetVRContent: !vr, newDim: %d %d\n", newDim.width, newDim.height);
+    //newDim.width = newDim.width * 2;
+  }
+  DoSetWindowDimensions(newDim.width, newDim.height);
 }

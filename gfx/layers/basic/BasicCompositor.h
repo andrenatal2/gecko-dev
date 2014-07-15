@@ -109,7 +109,7 @@ public:
 
   virtual void MakeCurrent(MakeCurrentFlags aFlags = 0) { }
 
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE { }
 
   virtual const char* Name() const { return "Basic"; }

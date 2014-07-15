@@ -522,7 +522,7 @@ CompositorD3D11::SetRenderTarget(CompositingRenderTarget* aRenderTarget)
   ID3D11RenderTargetView* view = newRT->mRTView;
   mCurrentRT = newRT;
   mContext->OMSetRenderTargets(1, &view, nullptr);
-  PrepareViewport(newRT->GetSize(), gfx::Matrix());
+  PrepareViewport(gfx::IntRect(gfx::IntPoint(0, 0), newRT->GetSize()), gfx::Matrix());
 }
 
 void
@@ -651,10 +651,10 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
 
   // XXX do I need to set a scissor rect? Is this the right scissor rect?
   D3D11_RECT scissor;
-  scissor.left = aClipRect.x;
-  scissor.right = aClipRect.XMost();
-  scissor.top = aClipRect.y;
-  scissor.bottom = aClipRect.YMost();
+  scissor.left = mViewport.x + aClipRect.x;
+  scissor.right = mViewport.x + aClipRect.XMost();
+  scissor.top = mViewport.y + aClipRect.y;
+  scissor.bottom = mViewport.y + aClipRect.YMost();
   mContext->RSSetScissorRects(1, &scissor);
 
   // Triangle lists and same layout for both eyes
@@ -780,10 +780,10 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
 
 
   D3D11_RECT scissor;
-  scissor.left = aClipRect.x;
-  scissor.right = aClipRect.XMost();
-  scissor.top = aClipRect.y;
-  scissor.bottom = aClipRect.YMost();
+  scissor.left = mViewport.x + aClipRect.x;
+  scissor.right = mViewport.x + aClipRect.XMost();
+  scissor.top = mViewport.y + aClipRect.y;
+  scissor.bottom = mViewport.y + aClipRect.YMost();
   mContext->RSSetScissorRects(1, &scissor);
   mContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
   mContext->VSSetShader(mAttachments->mVSQuadShader[maskType], nullptr, 0);
@@ -966,6 +966,7 @@ CompositorD3D11::BeginFrame(const nsIntRegion& aInvalidRegion,
     scissor.right = mSize.width;
     scissor.bottom = mSize.height;
   }
+
   mContext->RSSetScissorRects(1, &scissor);
 
   FLOAT black[] = { 0, 0, 0, 0 };
@@ -996,16 +997,18 @@ CompositorD3D11::EndFrame()
 }
 
 void
-CompositorD3D11::PrepareViewport(const gfx::IntSize& aSize,
+CompositorD3D11::PrepareViewport(const gfx::IntRect& aRect,
                                  const gfx::Matrix& aWorldTransform)
 {
+  mViewport = aRect;
+
   D3D11_VIEWPORT viewport;
   viewport.MaxDepth = 1.0f;
   viewport.MinDepth = 0.0f;
-  viewport.Width = aSize.width;
-  viewport.Height = aSize.height;
-  viewport.TopLeftX = 0;
-  viewport.TopLeftY = 0;
+  viewport.Width = aRect.width;
+  viewport.Height = aRect.height;
+  viewport.TopLeftX = aRect.x;
+  viewport.TopLeftY = aRect.y;
 
   mContext->RSSetViewports(1, &viewport);
 
@@ -1014,7 +1017,7 @@ CompositorD3D11::PrepareViewport(const gfx::IntSize& aSize,
   // This view matrix translates coordinates from 0..width and 0..height to
   // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
   viewMatrix.Translate(-1.0, 1.0);
-  viewMatrix.Scale(2.0f / float(aSize.width), 2.0f / float(aSize.height));
+  viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
   viewMatrix.Scale(1.0f, -1.0f);
 
   viewMatrix = aWorldTransform * viewMatrix;

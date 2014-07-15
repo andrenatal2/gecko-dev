@@ -376,7 +376,7 @@ public:
    * aWorldTransform is the transform from user space to the new viewport's
    * coordinate space.
    */
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) = 0;
 
   /**

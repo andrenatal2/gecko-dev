@@ -559,13 +559,13 @@ CompositorOGL::BindAndDrawQuadWithTextureRect(ShaderProgramOGL *aProg,
 }
 
 void
-CompositorOGL::PrepareViewport(const gfx::IntSize& aSize,
+CompositorOGL::PrepareViewport(const gfx::IntRect& aRect,
                                const Matrix& aWorldTransform)
 {
   // Set the viewport correctly.
-  mGLContext->fViewport(0, 0, aSize.width, aSize.height);
+  mGLContext->fViewport(aRect.x, aRect.y, aRect.width, aRect.height);
 
-  mHeight = aSize.height;
+  mHeight = aRect.height;
 
   // We flip the view matrix around so that everything is right-side up; we're
   // drawing directly into the window's back buffer, so this keeps things
@@ -581,10 +581,10 @@ CompositorOGL::PrepareViewport(const gfx::IntSize& aSize,
   if (mGLContext->IsOffscreen()) {
     // In case of rendering via GL Offscreen context, disable Y-Flipping
     viewMatrix.Translate(-1.0, -1.0);
-    viewMatrix.Scale(2.0f / float(aSize.width), 2.0f / float(aSize.height));
+    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
   } else {
     viewMatrix.Translate(-1.0, 1.0);
-    viewMatrix.Scale(2.0f / float(aSize.width), 2.0f / float(aSize.height));
+    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
     viewMatrix.Scale(1.0f, -1.0f);
   }
 

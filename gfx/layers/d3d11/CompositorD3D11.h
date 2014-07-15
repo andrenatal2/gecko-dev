@@ -134,7 +134,7 @@ public:
    * Setup the viewport and projection matrix for rendering
    * to a window of the given dimensions.
    */
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE;
 
   virtual bool SupportsPartialTextureUpdate() MOZ_OVERRIDE { return true; }
@@ -179,6 +179,8 @@ private:
   HWND mHwnd;
 
   D3D_FEATURE_LEVEL mFeatureLevel;
+
+  gfx::IntRect mViewport;
 
   VertexShaderConstants mVSConstants;
   PixelShaderConstants mPSConstants;

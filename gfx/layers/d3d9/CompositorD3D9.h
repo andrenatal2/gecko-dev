@@ -72,7 +72,7 @@ public:
 
   virtual void AbortFrame() MOZ_OVERRIDE {}
 
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE;
 
   virtual bool SupportsPartialTextureUpdate() MOZ_OVERRIDE{ return true; }
