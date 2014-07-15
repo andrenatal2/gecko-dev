@@ -11,6 +11,9 @@
 #include "mozilla/layers/Compositor.h"
 #include "TextureD3D11.h"
 #include <d3d11.h>
+#ifdef DEBUG
+#include <d3d11_1.h>
+#endif
 
 class nsWidget;
 
@@ -68,7 +71,15 @@ public:
                                  const CompositingRenderTarget* aSource,
                                  const gfx::IntPoint& aSourcePoint) MOZ_OVERRIDE;
 
-  virtual void SetRenderTarget(CompositingRenderTarget* aSurface) MOZ_OVERRIDE;
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                const gfx::IntRect& aRect,
+                                const gfx::Matrix& aWorldTransform,
+                                const gfx::Matrix4x4& aProjectionMatrix) MOZ_OVERRIDE;
+
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget) MOZ_OVERRIDE;
+
+  virtual void PopRenderTarget() MOZ_OVERRIDE;
+
   virtual CompositingRenderTarget* GetCurrentRenderTarget() const MOZ_OVERRIDE
   {
     return mCurrentRT;
@@ -134,8 +145,12 @@ public:
    * Setup the viewport and projection matrix for rendering
    * to a window of the given dimensions.
    */
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE;
+
+  virtual void PrepareViewport3D(const gfx::IntRect& aRect,
+                                 const gfx::Matrix& aWorldTransform,
+                                 const gfx::Matrix4x4& aProjection) MOZ_OVERRIDE;
 
   virtual bool SupportsPartialTextureUpdate() MOZ_OVERRIDE { return true; }
 
@@ -163,6 +178,7 @@ private:
   void SetSamplerForFilter(gfx::Filter aFilter);
   void SetPSForEffect(Effect *aEffect, MaskType aMaskType, gfx::SurfaceFormat aFormat);
   void PaintToTarget();
+  void SetRenderTarget(CompositingRenderTarget* aSurface);
 
   virtual gfx::IntSize GetWidgetSize() const MOZ_OVERRIDE { return gfx::ToIntSize(mSize); }
 
@@ -171,6 +187,10 @@ private:
   RefPtr<IDXGISwapChain> mSwapChain;
   RefPtr<CompositingRenderTargetD3D11> mDefaultRT;
   RefPtr<CompositingRenderTargetD3D11> mCurrentRT;
+
+#ifdef DEBUG
+  nsRefPtr<ID3DUserDefinedAnnotation> mDebugAnnotations;
+#endif
 
   DeviceAttachmentsD3D11* mAttachments;
 
@@ -181,6 +201,8 @@ private:
   HWND mHwnd;
 
   D3D_FEATURE_LEVEL mFeatureLevel;
+
+  gfx::IntRect mViewport;
 
   VertexShaderConstants mVSConstants;
   PixelShaderConstants mPSConstants;

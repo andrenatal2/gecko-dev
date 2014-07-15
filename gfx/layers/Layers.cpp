@@ -985,7 +985,7 @@ ContainerLayer::DefaultComputeEffectiveTransforms(const Matrix4x4& aTransformToS
   } else if (gfxUtils::sDumpPainting) {
     useIntermediateSurface = true;
 #endif
-  } else if (keep3D && !mEffectiveTransform.Is2D()) {
+  } else if (mHMDInfo || (keep3D && !mEffectiveTransform.Is2D())) {
     useIntermediateSurface = true;
   } else {
     float opacity = GetEffectiveOpacity();

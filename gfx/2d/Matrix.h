@@ -83,6 +83,10 @@ public:
     return Translate(aPoint.x, aPoint.y);
   }
 
+  Matrix &Translate(const Point& aP) {
+    return Translate(aP.x, aP.y);
+  }
+
   Matrix &PostTranslate(Float aX, Float aY)
   {
     _31 += aX;
@@ -311,6 +315,11 @@ public:
   Float _31, _32, _33, _34;
   Float _41, _42, _43, _44;
 
+  Matrix4x4(const Matrix4x4& aOther)
+  {
+    memcpy(this, &aOther, sizeof(*this));
+  }
+
   /**
    * Returns true if the matrix is isomorphic to a 2D affine transformation.
    */
@@ -452,6 +461,10 @@ public:
     return *this;
   }
 
+  Matrix4x4 &Translate(const Point3D& aPoint) {
+    return Translate(aPoint.x, aPoint.y, aPoint.z);
+  }
+
   Matrix4x4 &PostTranslate(Float aX, Float aY, Float aZ)
   {
     _11 += _14 * aX;
@@ -477,6 +490,17 @@ public:
 
     // Translate back into position after applying this matrix
     PostTranslate(aX, aY, aZ);
+  }
+
+  Matrix4x4& Transpose() {
+    std::swap(_12, _21);
+    std::swap(_13, _31);
+    std::swap(_14, _41);
+
+    std::swap(_23, _32);
+    std::swap(_24, _42);
+
+    std::swap(_34, _43);
 
     return *this;
   }
@@ -646,6 +670,16 @@ public:
 
   // Set all the members of the matrix to NaN
   void SetNAN();
+
+  static Matrix4x4 Translation(Float aX, Float aY, Float aZ) {
+    Matrix4x4 m;
+    m.Translate(aX, aY, aZ);
+    return m;
+  }
+
+  static Matrix4x4 Translation(const Point3D& aP) {
+    return Translation(aP.x, aP.y, aP.z);
+  }
 };
 
 class Matrix5x4

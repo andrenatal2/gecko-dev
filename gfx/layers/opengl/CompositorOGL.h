@@ -218,7 +218,15 @@ public:
                                const CompositingRenderTarget *aSource,
                                const gfx::IntPoint &aSourcePoint) MOZ_OVERRIDE;
 
-  virtual void SetRenderTarget(CompositingRenderTarget *aSurface) MOZ_OVERRIDE;
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                const gfx::IntRect& aRect,
+                                const gfx::Matrix& aWorldTransform,
+                                const gfx::Matrix4x4& aProjectionMatrix) MOZ_OVERRIDE;
+
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget) MOZ_OVERRIDE;
+
+  virtual void PopRenderTarget() MOZ_OVERRIDE;
+
   virtual CompositingRenderTarget* GetCurrentRenderTarget() const MOZ_OVERRIDE;
 
   virtual void DrawQuad(const gfx::Rect& aRect,
@@ -256,9 +264,12 @@ public:
 
   virtual void MakeCurrent(MakeCurrentFlags aFlags = 0) MOZ_OVERRIDE;
 
-  virtual void PrepareViewport(const gfx::IntSize& aSize,
+  virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE;
 
+  virtual void PrepareViewport3D(const gfx::IntRect& aRect,
+                                 const gfx::Matrix& aWorldTransform,
+                                 const gfx::Matrix4x4& aProjection) MOZ_OVERRIDE;
 
 #ifdef MOZ_DUMP_PAINTING
   virtual const char* Name() const MOZ_OVERRIDE { return "OGL"; }
@@ -294,6 +305,8 @@ private:
   {
     return gfx::ToIntSize(mWidgetSize);
   }
+
+  void SetRenderTarget(CompositingRenderTarget *aSurface);
 
   bool InitializeVR();
 
