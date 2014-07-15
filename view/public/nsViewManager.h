@@ -237,11 +237,6 @@ public:
   }
 
   /**
-   * Sets/unsets whether this view manager is managing VR-displayed content.
-   */
-  void SetVRContent(bool aVR);
-
-  /**
    * A stack class for disallowing changes that would enter painting. For
    * example, popup widgets shouldn't be resized during reflow, since doing so
    * might cause synchronous painting inside reflow which is forbidden.
@@ -412,7 +407,6 @@ private:
   bool              mRecursiveRefreshPending;
   bool              mHasPendingWidgetGeometryChanges;
   bool              mInScroll;
-  bool              mVRContent;
 
   //from here to public should be static and locked... MMP
 
