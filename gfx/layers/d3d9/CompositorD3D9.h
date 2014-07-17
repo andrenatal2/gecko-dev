@@ -43,7 +43,15 @@ public:
                                  const CompositingRenderTarget *aSource,
                                  const gfx::IntPoint &aSourcePoint) MOZ_OVERRIDE;
 
-  virtual void SetRenderTarget(CompositingRenderTarget *aSurface);
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                const gfx::IntRect& aRect,
+                                const gfx::Matrix& aWorldTransform,
+                                const gfx::Matrix4x4& aProjectionMatrix) MOZ_OVERRIDE;
+
+  virtual void PushRenderTarget(CompositingRenderTarget* aRenderTarget) MOZ_OVERRIDE;
+
+  virtual void PopRenderTarget() MOZ_OVERRIDE;
+
   virtual CompositingRenderTarget* GetCurrentRenderTarget() const MOZ_OVERRIDE
   {
     return mCurrentRT;
@@ -74,6 +82,10 @@ public:
 
   virtual void PrepareViewport(const gfx::IntRect& aRect,
                                const gfx::Matrix& aWorldTransform) MOZ_OVERRIDE;
+
+  virtual void PrepareViewport3D(const gfx::IntRect& aRect,
+                                 const gfx::Matrix& aWorldTransform,
+                                 const gfx::Matrix4x4& aProjection) MOZ_OVERRIDE;
 
   virtual bool SupportsPartialTextureUpdate() MOZ_OVERRIDE{ return true; }
 
@@ -120,6 +132,9 @@ public:
   virtual TemporaryRef<DataTextureSource>
     CreateDataTextureSource(TextureFlags aFlags = TextureFlags::NO_FLAGS) MOZ_OVERRIDE;
 private:
+
+  void SetRenderTarget(CompositingRenderTarget *aSurface);
+
   // ensure mSize is up to date with respect to mWidget
   void EnsureSize();
   void SetSamplerForFilter(gfx::Filter aFilter);

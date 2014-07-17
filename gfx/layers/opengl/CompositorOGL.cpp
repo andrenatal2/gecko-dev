@@ -594,6 +594,45 @@ CompositorOGL::PrepareViewport(const gfx::IntRect& aRect,
   matrix3d._33 = 0.0f;
 
   mProjMatrix = matrix3d;
+
+  UpdateTopRenderTargetStackViewport(aRect, aWorldTransform);
+}
+
+void
+CompositorOGL::PrepareViewport3D(const gfx::IntRect& aRect,
+                                 const Matrix& aWorldTransform,
+                                 const Matrix4x4& aProjection)
+{
+  // Set the viewport correctly.
+  mGLContext->fViewport(aRect.x, aRect.y, aRect.width, aRect.height);
+
+  mHeight = aRect.height;
+
+  // We flip the view matrix around so that everything is right-side up; we're
+  // drawing directly into the window's back buffer, so this keeps things
+  // looking correct.
+  // XXX: We keep track of whether the window size changed, so we could skip
+  // this update if it hadn't changed since the last call. We will need to
+  // track changes to aTransformPolicy and aWorldTransform for this to work
+  // though.
+
+  // Matrix to transform (0, 0, aWidth, aHeight) to viewport space (-1.0, 1.0,
+  // 2, 2) and flip the contents.
+  Matrix viewMatrix;
+  if (mGLContext->IsOffscreen()) {
+    // In case of rendering via GL Offscreen context, disable Y-Flipping
+    viewMatrix.Translate(-1.0, -1.0);
+    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
+  } else {
+    viewMatrix.Translate(-1.0, 1.0);
+    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
+    viewMatrix.Scale(1.0f, -1.0f);
+  }
+
+  viewMatrix = aWorldTransform * viewMatrix;
+  mProjMatrix = aProjection * Matrix4x4::From2D(viewMatrix);
+
+  UpdateTopRenderTargetStackViewport(aRect, aWorldTransform, aProjection);
 }
 
 TemporaryRef<CompositingRenderTarget>
@@ -635,6 +674,48 @@ CompositorOGL::CreateRenderTargetFromSource(const IntRect &aRect,
 }
 
 void
+CompositorOGL::PushRenderTarget(CompositingRenderTarget* aRenderTarget)
+{
+  CompositingRenderTargetOGL* newRT =
+    static_cast<CompositingRenderTargetOGL*>(aRenderTarget);
+
+  gfx::Matrix4x4 zeroZ;
+  zeroZ._33 = 0.0f;
+
+  PushRenderTarget(aRenderTarget,
+                   gfx::IntRect(gfx::IntPoint(0, 0), newRT->GetSize()),
+                   gfx::Matrix(),
+                   zeroZ);
+}
+
+void
+CompositorOGL::PushRenderTarget(CompositingRenderTarget* aRenderTarget,
+                                const gfx::IntRect& aRect,
+                                const gfx::Matrix& aWorldTransform,
+                                const gfx::Matrix4x4& aProjectionMatrix)
+{
+  // need a new element, which will be filled in by SetRenderTarget and
+  // PrepareViewport3D
+  mRenderTargetStack.AppendElement();
+
+  SetRenderTarget(aRenderTarget);
+  PrepareViewport3D(aRect, aWorldTransform, aProjectionMatrix);
+}
+
+void
+CompositorOGL::PopRenderTarget()
+{
+  MOZ_ASSERT(mRenderTargetStack.Length() > 1);
+
+  // nuke the last element
+  mRenderTargetStack.SetLength(mRenderTargetStack.Length() - 1);
+
+  RenderTargetStackEntry& entry(mRenderTargetStack.LastElement());
+  SetRenderTarget(entry.mTarget);
+  PrepareViewport3D(entry.mRect, entry.mWorldTransform, entry.mProjectionMatrix);
+}
+
+void
 CompositorOGL::SetRenderTarget(CompositingRenderTarget *aSurface)
 {
   MOZ_ASSERT(aSurface);
@@ -643,6 +724,7 @@ CompositorOGL::SetRenderTarget(CompositingRenderTarget *aSurface)
   if (mCurrentRenderTarget != surface) {
     surface->BindRenderTarget();
     mCurrentRenderTarget = surface;
+    mRenderTargetStack.LastElement().mTarget = aSurface;
   }
 }
 

@@ -276,19 +276,29 @@ static void PrintUniformityInfo(Layer* aLayer)
     TimeStamp::Now(), aLayer, layerScroll.x, layerScroll.y);
 }
 
+static void
+printf_matrix(const char *s, const gfx::Matrix4x4& m)
+{
+  printf_stderr("%s:\n", s);
+  printf_stderr("[[ %10.8f %10.8f %10.8f %10.8f ]\n", m._11, m._12, m._13, m._14);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._21, m._22, m._23, m._24);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._31, m._32, m._33, m._34);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]]\n", m._41, m._42, m._43, m._44);
+}
+
 template<class ContainerT> void
 ContainerRenderVR(ContainerT* aContainer,
                   LayerManagerComposite* aManager,
                   const nsIntRect& aClipRect,
                   gfx::VRHMDInfo* aHMD)
 {
+  //printf_stderr(">>> ContainerRenderVR\n");
   Compositor* compositor = aManager->GetCompositor();
 
   // XXX if we only have one child, and if that child is a CanvasLayer (or something else that we can
   // directly render, such as an ImageLayer), and it has CONTENT_NATIVE_VR set, we should be able
   // to skip basically all of this, and just render it with the VR distortion effect.
 
-  RefPtr<CompositingRenderTarget> previousTarget = compositor->GetCurrentRenderTarget();
   RefPtr<CompositingRenderTarget> surface;
 
   nsIntRect visibleRect = aContainer->GetEffectiveVisibleRegion().GetBounds();
@@ -305,7 +315,8 @@ ContainerRenderVR(ContainerT* aContainer,
   // a proper sized surface
 
   int32_t maxTextureSize = compositor->GetMaxTextureSize();
-  surfaceRect.width = std::min(maxTextureSize, surfaceRect.width * 2);
+  int32_t eyeWidth = surfaceRect.width;
+  surfaceRect.width = std::min(maxTextureSize, eyeWidth * 2);
   surfaceRect.height = std::min(maxTextureSize, surfaceRect.height);
 
   // create the one compositing surface for both eyes
@@ -315,16 +326,8 @@ ContainerRenderVR(ContainerT* aContainer,
     return;
   }
 
-  gfx::Matrix4x4 origTransform(aContainer->mEffectiveTransform);
-  gfx::Matrix4x4 eyeTransform[2] = { origTransform, origTransform };
-
-  int32_t halfWidth = surfaceRect.width / 2;
-  gfx::IntRect eyeRect[2] = {
-    gfx::IntRect(0        , 0, halfWidth, surfaceRect.height),
-    gfx::IntRect(halfWidth, 0, halfWidth, surfaceRect.height)
-  };
-
-  compositor->SetRenderTarget(surface);
+  //printf_stderr("=== ContainerRenderVR pushing %p\n", surface.get());
+  compositor->PushRenderTarget(surface);
 
   nsAutoTArray<Layer*, 12> children;
   aContainer->SortChildrenBy3DZOrder(children);
@@ -333,14 +336,33 @@ ContainerRenderVR(ContainerT* aContainer,
    * Render this container's contents.  We render each layer twice, once for each eye,
    * with different transforms.
    */
-  nsIntRect childClipRect(0, 0, halfWidth, surfaceRect.height);
+  gfx::Matrix4x4 origTransform(aContainer->mEffectiveTransform);
+
+  //printf_matrix("origTransform", origTransform);
+
+  nsIntRect childClipRect(0, 0, eyeWidth, surfaceRect.height);
   for (uint32_t eye = 0; eye < 2; ++eye) {
     // set up the viewport for the proper rect for this eye.
-    compositor->PrepareViewport(eyeRect[eye], gfx::Matrix());
+    // XXX fix this for vertical displays
+    // XXX There is no matrix.Translate that takes a Point?!?!?!
+    gfx::Point3D eyeTranslation = aHMD->GetEyeTranslation(eye);
+    gfx::IntRect eyeRect(eye * eyeWidth, 0, eyeWidth, surfaceRect.height);
+    gfx::Matrix4x4 eyeProjection = aHMD->GetEyeProjectionMatrix(eye);
+
+    //printf_stderr("Eye %d  translation %f %f %f; \n", eye, eyeTranslation.x, eyeTranslation.y, eyeTranslation.z);
+    //printf_matrix("eyeProjection", eyeProjection);
+
+    compositor->PrepareViewport3D(eyeRect, gfx::Matrix(), eyeProjection);
+    //compositor->PrepareViewport3D(eyeRect, gfx::Matrix(), gfx::Matrix4x4());
+    //compositor->PrepareViewport(eyeRect, gfx::Matrix());
+
+    gfx::Matrix4x4 eyeTransform = gfx::Matrix4x4::Translation(eyeTranslation) * origTransform;
+
+    //printf_matrix("eyeTransform (final)", eyeTransform);
 
     // make sure mEffectiveTransform is up to date for traversal
-    aContainer->mEffectiveTransform = eyeTransform[eye];
-    aContainer->ComputeEffectiveTransformsForChildren(eyeTransform[eye]);
+    aContainer->mEffectiveTransform = eyeTransform;
+    aContainer->ComputeEffectiveTransformsForChildren(eyeTransform);
 
     for (uint32_t i = 0; i < children.Length(); i++) {
       LayerComposite* layerToRender = static_cast<LayerComposite*>(children.ElementAt(i)->ImplData());
@@ -358,6 +380,10 @@ ContainerRenderVR(ContainerT* aContainer,
       if (clipRect.IsEmpty()) {
         continue;
       }
+
+      //Matrix4x4 lf = layer->GetEffectiveTransform();
+      //printf_stderr("Layer [%d] %p (%s)\n", i, layer, layer->Name());
+      //printf_matrix("effective transform", lf);
 
       if (layer->GetContentFlags() & Layer::CONTENT_NATIVE_VR) {
         // XXX This layer has native VR content; that is, it's already rendered both
@@ -391,7 +417,7 @@ ContainerRenderVR(ContainerT* aContainer,
   }
 #endif
 
-  compositor->SetRenderTarget(previousTarget);
+  compositor->PopRenderTarget();
 
   gfx::Rect rect(visibleRect.x, visibleRect.y, visibleRect.width * 2, visibleRect.height);
   gfx::Rect clipRect(aClipRect.x, aClipRect.y, aClipRect.width * 2, aClipRect.height);
@@ -401,10 +427,12 @@ ContainerRenderVR(ContainerT* aContainer,
   // XXX should DrawQuad handle this on its own?  Is there a time where we wouldn't want
   // to do this? (e.g. something like Cardboard would not require distortion so will fill
   // the entire rect)
+#if 0
   EffectChain solidEffect(aContainer);
   solidEffect.mPrimaryEffect = new EffectSolidColor(Color(0.0, 0.0, 0.0, 1.0));
   aManager->GetCompositor()->DrawQuad(rect, clipRect, solidEffect, opacity,
                                       aContainer->GetEffectiveTransform());
+#endif
 
   // draw the temporary surface with VR distortion to the original destination
   EffectChain vrEffect(aContainer);
@@ -414,8 +442,11 @@ ContainerRenderVR(ContainerT* aContainer,
   // XXX we shouldn't use visibleRect here -- the VR distortion needs to know the
   // full rect, not just the visible one.  Luckily, right now, VR distortion is only
   // rendered when the element is fullscreen, so the visibleRect will be right anyway.
+  //printf_stderr("=== ContainerRenderVR final DrawQuad\n");
   aManager->GetCompositor()->DrawQuad(rect, clipRect, vrEffect, opacity,
                                       aContainer->GetEffectiveTransform());
+
+  //printf_stderr("<<< ContainerRenderVR\n");
 }
 
 // ContainerRender is shared between RefLayer and ContainerLayer
@@ -429,6 +460,8 @@ ContainerRender(ContainerT* aContainer,
     ContainerRenderVR(aContainer, aManager, aClipRect, hmdInfo);
     return;
   }
+
+  //printf_stderr(">>> ContainerRender\n");
 
   /**
    * Setup our temporary surface for rendering the contents of this container.
@@ -485,7 +518,8 @@ ContainerRender(ContainerT* aContainer,
       return;
     }
 
-    compositor->SetRenderTarget(surface);
+    //printf_stderr(" === ContainerRender pushing %p\n", surface.get());
+    compositor->PushRenderTarget(surface);
   } else {
     surface = previousTarget;
   }
@@ -599,10 +633,11 @@ ContainerRender(ContainerT* aContainer,
     }
 #endif
 
-    compositor->SetRenderTarget(previousTarget);
+    compositor->PopRenderTarget();
   }
 
   if (needsSurface) {
+    //printf_stderr(" === ContainerRender surface blit\n");
     // draw the temporary surface to the original destionation
     EffectChain effectChain(aContainer);
     LayerManagerComposite::AutoAddMaskEffect autoMaskEffect(aContainer->GetMaskLayer(),
@@ -627,6 +662,8 @@ ContainerRender(ContainerT* aContainer,
                                                rect, clipRect,
                                                aContainer->GetEffectiveTransform());
   }
+
+  //printf_stderr("<<< ContainerRender\n");
 }
 
 ContainerLayerComposite::ContainerLayerComposite(LayerManagerComposite *aManager)

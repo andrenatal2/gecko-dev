@@ -48,6 +48,8 @@ static pfn_ovrHmd_EndFrameTiming ovrHmd_EndFrameTiming = nullptr;
 static pfn_ovrHmd_ResetFrameTiming ovrHmd_ResetFrameTiming = nullptr;
 static pfn_ovrHmd_GetEyePose ovrHmd_GetEyePose = nullptr;
 static pfn_ovrHmd_GetEyeTimewarpMatrices ovrHmd_GetEyeTimewarpMatrices = nullptr;
+static pfn_ovrMatrix4f_Projection ovrMatrix4f_Projection = nullptr;
+static pfn_ovrMatrix4f_OrthoSubProjection ovrMatrix4f_OrthoSubProjection = nullptr;
 static pfn_ovr_GetTimeInSeconds ovr_GetTimeInSeconds = nullptr;
 
 #if defined(XP_WIN)
@@ -143,6 +145,8 @@ InitializeOculusCAPI()
   REQUIRE_FUNCTION(ovrHmd_ResetFrameTiming);
   REQUIRE_FUNCTION(ovrHmd_GetEyePose);
   REQUIRE_FUNCTION(ovrHmd_GetEyeTimewarpMatrices);
+  REQUIRE_FUNCTION(ovrMatrix4f_Projection);
+  REQUIRE_FUNCTION(ovrMatrix4f_OrthoSubProjection);
   REQUIRE_FUNCTION(ovr_GetTimeInSeconds);
 
 #undef REQUIRE_FUNCTION
@@ -257,31 +261,32 @@ HMDInfoOculus::Destroy()
 bool
 HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight)
 {
-  mEyeFOV[Eye_Left] = aFOVLeft;
-  mEyeFOV[Eye_Right] = aFOVRight;
-
-  mFOVPort[Eye_Left] = ToFovPort(aFOVLeft);
-  mFOVPort[Eye_Right] = ToFovPort(aFOVRight);
-
-  ovrEyeRenderDesc leftEye = ovrHmd_GetRenderDesc(mHMD, ovrEye_Left, mFOVPort[Eye_Left]);
-  ovrEyeRenderDesc rightEye = ovrHmd_GetRenderDesc(mHMD, ovrEye_Right, mFOVPort[Eye_Right]);
-
-  mEyeTranslation[Eye_Left] = Point3D(leftEye.ViewAdjust.x, leftEye.ViewAdjust.y, leftEye.ViewAdjust.z);
-  mEyeTranslation[Eye_Right] = Point3D(rightEye.ViewAdjust.x, rightEye.ViewAdjust.y, rightEye.ViewAdjust.z);
-
-  /* only use left, we'll just assume it's the same for both eyes */
   float pixelsPerDisplayPixel = 1.0;
   ovrSizei texSize[2];
 
-  texSize[Eye_Left] = ovrHmd_GetFovTextureSize(mHMD, ovrEye_Left, mFOVPort[Eye_Left], pixelsPerDisplayPixel);
-  texSize[Eye_Right] = ovrHmd_GetFovTextureSize(mHMD, ovrEye_Right, mFOVPort[Eye_Right], pixelsPerDisplayPixel);
-
-  mEyeResolution.width = std::max(texSize[Eye_Left].w, texSize[Eye_Right].w);
-  mEyeResolution.height = std::max(texSize[Eye_Left].h, texSize[Eye_Right].h);
-
-  /* create the mesh */
   uint32_t caps = ovrDistortionCap_Chromatic | ovrDistortionCap_Vignette; // XXX TODO add TimeWarp
+
+  // get eye parameters and create the mesh
   for (uint32_t eye = 0; eye < NumEyes; eye++) {
+    mEyeFOV[eye] = eye == 0 ? aFOVLeft : aFOVRight;
+    mFOVPort[eye] = ToFovPort(mEyeFOV[eye]);
+
+    ovrEyeRenderDesc renderDesc = ovrHmd_GetRenderDesc(mHMD, (ovrEyeType) eye, mFOVPort[eye]);
+    mEyeTranslation[eye] = Point3D(renderDesc.ViewAdjust.x, renderDesc.ViewAdjust.y, renderDesc.ViewAdjust.z);
+
+    // We set near to epsilon and far to 1.0, and then we scale in the
+    // compositor's viewport transform.
+    // XXX The actual znear/zfar probably need to come from CSS, or we
+    // can even accept them as part of the SetFOV call on the VR HMD
+    // device, but I think we can do that scaling later.
+    ovrMatrix4f projMatrix = ovrMatrix4f_Projection(mFOVPort[eye], 0.0001f, 1.0f, false);
+    // XXX this is gross, we really need better methods on Matrix4x4
+    memcpy(&mEyeProjectionMatrix[eye], projMatrix.M, sizeof(ovrMatrix4f));
+    mEyeProjectionMatrix[eye].Transpose();
+
+    // XXX need to do better here
+    texSize[eye] = ovrHmd_GetFovTextureSize(mHMD, (ovrEyeType) eye, mFOVPort[eye], pixelsPerDisplayPixel);
+
     ovrDistortionMesh mesh;
     bool ok = ovrHmd_CreateDistortionMesh(mHMD, (ovrEyeType) eye, mFOVPort[eye], caps, &mesh);
     if (!ok)
@@ -311,6 +316,10 @@ HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRi
     memcpy(mDistortionMesh[eye].mIndices.Elements(), mesh.pIndexData, mesh.IndexCount * sizeof(uint16_t));
     ovrHmd_DestroyDistortionMesh(&mesh);
   }
+
+  // take the max of both for eye resolution
+  mEyeResolution.width = std::max(texSize[Eye_Left].w, texSize[Eye_Right].w);
+  mEyeResolution.height = std::max(texSize[Eye_Left].h, texSize[Eye_Right].h);
 
   mConfiguration.hmdType = mType;
   mConfiguration.value = 0;

@@ -73,11 +73,19 @@ public:
     return *this;
   }
 
+  Matrix &Translate(const Point& aP) {
+    return Translate(aP.x, aP.y);
+  }
+
   Matrix &PostTranslate(Float aX, Float aY)
   {
     _31 += aX;
     _32 += aY;
     return *this;
+  }
+
+  Matrix &PostTranslate(const Point& aP) {
+    return PostTranslate(aP.x, aP.y);
   }
 
   Matrix &Rotate(Float aAngle)
@@ -285,6 +293,11 @@ public:
   Float _31, _32, _33, _34;
   Float _41, _42, _43, _44;
 
+  Matrix4x4(const Matrix4x4& aOther)
+  {
+    memcpy(this, &aOther, sizeof(*this));
+  }
+
   /**
    * Returns true if the matrix is isomorphic to a 2D affine transformation.
    */
@@ -426,6 +439,23 @@ public:
     return *this;
   }
 
+  Matrix4x4 &Translate(const Point3D& aP) {
+    return Translate(aP.x, aP.y, aP.z);
+  }
+
+  Matrix4x4& Transpose() {
+    std::swap(_12, _21);
+    std::swap(_13, _31);
+    std::swap(_14, _41);
+
+    std::swap(_23, _32);
+    std::swap(_24, _42);
+
+    std::swap(_34, _43);
+
+    return *this;
+  }
+
   bool operator==(const Matrix4x4& o) const
   {
     // XXX would be nice to memcmp here, but that breaks IEEE 754 semantics
@@ -506,6 +536,16 @@ public:
          - _11 * _23 * _32 * _44
          - _12 * _21 * _33 * _44
          + _11 * _22 * _33 * _44;
+  }
+
+  static Matrix4x4 Translation(Float aX, Float aY, Float aZ) {
+    Matrix4x4 m;
+    m.Translate(aX, aY, aZ);
+    return m;
+  }
+
+  static Matrix4x4 Translation(const Point3D& aP) {
+    return Translation(aP.x, aP.y, aP.z);
   }
 
 };
