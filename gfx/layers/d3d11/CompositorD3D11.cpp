@@ -1097,6 +1097,7 @@ CompositorD3D11::BeginFrame(const nsIntRegion& aInvalidRegion,
   mContext->RSSetState(mAttachments->mRasterizerState);
 
   SetRenderTarget(mDefaultRT);
+  PrepareViewport(gfx::IntRect(gfx::IntPoint(0, 0), mDefaultRT->GetSize()), gfx::Matrix());
 }
 
 void
@@ -1173,14 +1174,16 @@ CompositorD3D11::PrepareViewport3D(const gfx::IntRect& aRect,
   // This view matrix translates coordinates from 0..width and 0..height to
   // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
   // XXX fix this depth hacking with a css property!
-  // We also fix the depth to be from max(width,height)/2..-max(width,height)/2
-  float dimMax = std::max(aRect.width, aRect.height);
+  // We also fix the depth to be from max(width,height)/2..-max(width,height)/2 * 10
+  // This is totally arbitrary and we may as well just pick arbitrary values
+  float dimMax = std::max(aRect.width, aRect.height) * 10;
   Matrix4x4 viewMatrix;
   viewMatrix.Translate(-1.0, 1.0, 0.5);
   viewMatrix.Scale(2.0f / float(aRect.width),
                    -2.0f / float(aRect.height),
-                   -4.0f / float(std::max(aRect.width, aRect.height)));
+                   -4.0f / dimMax);
 
+  //printf("PrepareViewport3D viewMatrix dimMax: %f\n", dimMax);
   //printf_matrix("PrepareViewport3D viewMatrix", viewMatrix);
   //if (!aWorldTransform.IsIdentity()) printf_matrix("PrepareViewport3D worldTransform", Matrix4x4::From2D(aWorldTransform));
 
