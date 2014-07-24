@@ -5414,3 +5414,14 @@ if (SpecialPowers.getBoolPref("layout.css.unset-value.enabled")) {
     gCSSProperties["text-align"].invalid_values.push("true left");
   }
 }
+
+if (SpecialPowers.getBoolPref("dom.vr.enabled")) {
+  gCSSProperties["vr-style"] = {
+    domProp: "vrStyle",
+    inherited: false,
+    type: CSS_TYPE_LONGHAND,
+    initial_values: [ "auto" ],
+    other_values: [ "native" ],
+    invalid_values: [ "none",  "1px" ]
+  };
+}

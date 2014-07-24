@@ -3916,6 +3916,16 @@ CSS_PROP_SVGRESET(
     kVectorEffectKTable,
     offsetof(nsStyleSVGReset, mVectorEffect),
     eStyleAnimType_EnumU8)
+CSS_PROP_DISPLAY(
+    vr-style,
+    vr_style,
+    VrStyle,
+    CSS_PROPERTY_PARSE_VALUE,
+    "dom.vr.enabled",
+    VARIANT_HK,
+    kVRStyleKTable,
+    CSS_PROP_NO_OFFSET,
+    eStyleAnimType_None)
 
 CSS_PROP_DISPLAY(
     will-change,

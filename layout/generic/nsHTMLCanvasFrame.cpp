@@ -273,6 +273,11 @@ nsHTMLCanvasFrame::BuildLayer(nsDisplayListBuilder* aBuilder,
   layer->SetFilter(nsLayoutUtils::GetGraphicsFilterForFrame(this));
   layer->SetVisibleRegion(nsIntRect(0, 0, canvasSize.width, canvasSize.height));
 
+  const nsStyleDisplay* disp = StyleDisplay();
+  if (disp->mVRStyle == NS_STYLE_VR_STYLE_NATIVE) {
+    layer->SetContentFlags(layer->GetContentFlags() | Layer::CONTENT_NATIVE_VR);
+  }
+
   return layer.forget();
 }
 

@@ -653,6 +653,7 @@ public:
   static const KTableValue kCounterSystemKTable[];
   static const KTableValue kCounterRangeKTable[];
   static const KTableValue kCounterSpeakAsKTable[];
+  static const KTableValue kVRStyleKTable[];
 };
 
 inline nsCSSProps::EnabledState operator|(nsCSSProps::EnabledState a,

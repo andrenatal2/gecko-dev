@@ -1971,6 +1971,12 @@ const KTableValue nsCSSProps::kCounterSpeakAsKTable[] = {
   eCSSKeyword_UNKNOWN, -1
 };
 
+const KTableValue nsCSSProps::kVRStyleKTable[] = {
+  eCSSKeyword_auto, NS_STYLE_VR_STYLE_AUTO,
+  eCSSKeyword_native, NS_STYLE_VR_STYLE_NATIVE,
+  eCSSKeyword_UNKNOWN, -1
+};
+
 static bool IsKeyValSentinel(nsCSSKeyword aKey, KTableValue aValue)
 {
   return aKey == eCSSKeyword_UNKNOWN && aValue == -1;
