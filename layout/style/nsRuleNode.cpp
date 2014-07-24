@@ -5694,6 +5694,13 @@ nsRuleNode::ComputeDisplayData(void* aStartStruct,
               parentDisplay->mOrient,
               NS_STYLE_ORIENT_AUTO, 0, 0, 0, 0);
 
+  // vr-style: enum, inherit, initial
+  SetDiscrete(*aRuleData->ValueForVrStyle(),
+              display->mVRStyle, canStoreInRuleTree,
+              SETDSC_ENUMERATED | SETDSC_UNSET_INITIAL,
+              parentDisplay->mVRStyle,
+              NS_STYLE_VR_STYLE_AUTO, 0, 0, 0, 0);
+
   COMPUTE_END_RESET(Display, display)
 }
 

@@ -5524,6 +5524,16 @@ nsComputedDOMStyle::DoGetAnimationPlayState()
   return valueList;
 }
 
+CSSValue*
+nsComputedDOMStyle::DoGetVRStyle()
+{
+  nsROCSSPrimitiveValue* val = new nsROCSSPrimitiveValue;
+  val->SetIdent(
+    nsCSSProps::ValueToKeywordEnum(StyleDisplay()->mVRStyle,
+                                   nsCSSProps::kVRStyleKTable));
+  return val;
+}
+
 static void
 MarkComputedStyleMapDirty(const char* aPref, void* aData)
 {

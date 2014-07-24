@@ -2380,6 +2380,7 @@ nsStyleDisplay::nsStyleDisplay()
   mOrient = NS_STYLE_ORIENT_AUTO;
   mMixBlendMode = NS_STYLE_BLEND_NORMAL;
   mTouchAction = NS_STYLE_TOUCH_ACTION_AUTO;
+  mVRStyle = NS_STYLE_VR_STYLE_AUTO;
 
   mTransitions.AppendElement();
   NS_ABORT_IF_FALSE(mTransitions.Length() == 1,
@@ -2432,6 +2433,7 @@ nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
   , mTransformStyle(aSource.mTransformStyle)
   , mSpecifiedTransform(aSource.mSpecifiedTransform)
   , mChildPerspective(aSource.mChildPerspective)
+  , mVRStyle(aSource.mVRStyle)
   , mTransitions(aSource.mTransitions)
   , mTransitionTimingFunctionCount(aSource.mTransitionTimingFunctionCount)
   , mTransitionDurationCount(aSource.mTransitionDurationCount)
@@ -2467,7 +2469,8 @@ nsChangeHint nsStyleDisplay::CalcDifference(const nsStyleDisplay& aOther) const
       || (mFloats == NS_STYLE_FLOAT_NONE) != (aOther.mFloats == NS_STYLE_FLOAT_NONE)
       || mOverflowX != aOther.mOverflowX
       || mOverflowY != aOther.mOverflowY
-      || mResize != aOther.mResize)
+      || mResize != aOther.mResize
+      || mVRStyle != aOther.mVRStyle)
     NS_UpdateHint(hint, nsChangeHint_ReconstructFrame);
 
   if ((mAppearance == NS_THEME_TEXTFIELD &&

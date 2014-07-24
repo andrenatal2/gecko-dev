@@ -1044,6 +1044,10 @@ static inline mozilla::css::Side operator++(mozilla::css::Side& side, int) {
 #define NS_STYLE_COUNTER_SPEAKAS_SPELL_OUT  3
 #define NS_STYLE_COUNTER_SPEAKAS_OTHER      255 // refer to another style
 
+// VR
+#define NS_STYLE_VR_STYLE_AUTO       0
+#define NS_STYLE_VR_STYLE_NATIVE     1
+
 /*****************************************************************************
  * Constants for media features.                                             *
  *****************************************************************************/
