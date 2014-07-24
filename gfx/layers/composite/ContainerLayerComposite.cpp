@@ -333,14 +333,50 @@ ContainerRenderVR(ContainerT* aContainer,
   aContainer->SortChildrenBy3DZOrder(children);
 
   /**
-   * Render this container's contents.  We render each layer twice, once for each eye,
+   * Render this container's contents.  We first render the "native VR" layers, stretching them
+   * across the full VR area.  Then we render each layer twice, once for each eye,
    * with different transforms.
    */
   gfx::Matrix4x4 origTransform(aContainer->mEffectiveTransform);
 
   //printf_matrix("origTransform", origTransform);
 
-  nsIntRect childClipRect(0, 0, eyeWidth, surfaceRect.height);
+  nsIntRect surfaceClipRect(0, 0, surfaceRect.width, surfaceRect.height);
+  for (uint32_t i = 0; i < children.Length(); i++) {
+    LayerComposite* layerToRender = static_cast<LayerComposite*>(children.ElementAt(i)->ImplData());
+    Layer* layer = layerToRender->GetLayer();
+    uint32_t contentFlags = layer->GetContentFlags();
+
+    if (layer->GetEffectiveVisibleRegion().IsEmpty() &&
+        !layer->AsContainerLayer()) {
+      continue;
+    }
+
+    // XXX this is not the right calculation I don't think.  The manager world transform
+    // should not be relevant here if we're going to apply a VR distortion.
+    nsIntRect clipRect = layer->
+      CalculateScissorRect(surfaceClipRect, &aManager->GetWorldTransform());
+    if (clipRect.IsEmpty()) {
+      continue;
+    }
+
+    if (contentFlags & Layer::CONTENT_PRESERVE_3D &&
+        !(contentFlags & Layer::CONTENT_NATIVE_VR))
+    {
+      continue;
+    }
+
+    layerToRender->RenderLayer(surfaceClipRect);
+  }
+
+  /*
+   * Then the non-native-VR layers.
+   * XXX rendering them twice for each eye causes the Thebes layers
+   * to also render their content twice, which is unnecessary and expensive.  We need to fix
+   * that, so that they can reuse their previous texture for the second rendering.
+   */
+
+  nsIntRect eyeClipRect(0, 0, eyeWidth, surfaceRect.height);
   for (uint32_t eye = 0; eye < 2; ++eye) {
     // set up the viewport for the proper rect for this eye.
     // XXX fix this for vertical displays
@@ -353,12 +389,8 @@ ContainerRenderVR(ContainerT* aContainer,
     //printf_matrix("eyeProjection", eyeProjection);
 
     compositor->PrepareViewport3D(eyeRect, gfx::Matrix(), eyeProjection);
-    //compositor->PrepareViewport3D(eyeRect, gfx::Matrix(), gfx::Matrix4x4());
-    //compositor->PrepareViewport(eyeRect, gfx::Matrix());
 
     gfx::Matrix4x4 eyeTransform = gfx::Matrix4x4::Translation(eyeTranslation) * origTransform;
-
-    //printf_matrix("eyeTransform (final)", eyeTransform);
 
     // make sure mEffectiveTransform is up to date for traversal
     aContainer->mEffectiveTransform = eyeTransform;
@@ -367,6 +399,15 @@ ContainerRenderVR(ContainerT* aContainer,
     for (uint32_t i = 0; i < children.Length(); i++) {
       LayerComposite* layerToRender = static_cast<LayerComposite*>(children.ElementAt(i)->ImplData());
       Layer* layer = layerToRender->GetLayer();
+      uint32_t contentFlags = layer->GetContentFlags();
+
+#if 0
+      printf_stderr("VR Container, child %d type %s flags (0x%04x): PRESERVE_3D %s NATIVE_VR %s OPAQUE %s\n",
+                    i, layer->Name(), contentFlags,
+                    contentFlags & Layer::CONTENT_PRESERVE_3D ? "YES" : "no",
+                    contentFlags & Layer::CONTENT_NATIVE_VR ? "YES" : "no",
+                    contentFlags & Layer::CONTENT_OPAQUE ? "YES" : "no");
+#endif
 
       if (layer->GetEffectiveVisibleRegion().IsEmpty() &&
           !layer->AsContainerLayer()) {
@@ -376,7 +417,7 @@ ContainerRenderVR(ContainerT* aContainer,
       // XXX this is not the right calculation I don't think.  The manager world transform
       // should not be relevant here if we're going to apply a VR distortion.
       nsIntRect clipRect = layer->
-        CalculateScissorRect(childClipRect, &aManager->GetWorldTransform());
+        CalculateScissorRect(eyeClipRect, &aManager->GetWorldTransform());
       if (clipRect.IsEmpty()) {
         continue;
       }
@@ -385,17 +426,13 @@ ContainerRenderVR(ContainerT* aContainer,
       //printf_stderr("Layer [%d] %p (%s)\n", i, layer, layer->Name());
       //printf_matrix("effective transform", lf);
 
-      if (layer->GetContentFlags() & Layer::CONTENT_NATIVE_VR) {
-        // XXX This layer has native VR content; that is, it's already rendered both
-        // eyes. So we need to do the right thing here -- just pull out this eye's
-        // content and render it in to the destination viewport.  I'm not sure how to
-        // do that; the only layers that will support this initially will be Canvas layers
-        // and image layers.  So do we just extend the Layer API of those to allow
-        // specifying which eye to render?
-        layerToRender->RenderLayer(clipRect);
-      } else {
-        layerToRender->RenderLayer(clipRect);
+      if (!(contentFlags & Layer::CONTENT_PRESERVE_3D) ||
+          contentFlags & Layer::CONTENT_NATIVE_VR)
+      {
+        continue;
       }
+
+      layerToRender->RenderLayer(clipRect);
 
       if (gfxPrefs::LayersScrollGraph()) DrawVelGraph(clipRect, aManager, layer);
       if (gfxPrefs::UniformityInfo()) PrintUniformityInfo(layer);
