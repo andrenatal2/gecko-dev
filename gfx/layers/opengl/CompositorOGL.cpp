@@ -616,21 +616,28 @@ CompositorOGL::PrepareViewport3D(const gfx::IntRect& aRect,
   // track changes to aTransformPolicy and aWorldTransform for this to work
   // though.
 
-  // Matrix to transform (0, 0, aWidth, aHeight) to viewport space (-1.0, 1.0,
-  // 2, 2) and flip the contents.
-  Matrix viewMatrix;
+  // This view matrix translates coordinates from 0..width and 0..height to
+  // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
+  // XXX fix this depth hacking with a css property!
+  // We also fix the depth to be from max(width,height)/2..-max(width,height)/2 * 10
+  // This is totally arbitrary and we may as well just pick arbitrary values
+  float dimMax = std::max(aRect.width, aRect.height) * 10;
+  Matrix4x4 viewMatrix;
   if (mGLContext->IsOffscreen()) {
     // In case of rendering via GL Offscreen context, disable Y-Flipping
-    viewMatrix.Translate(-1.0, -1.0);
-    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
+    viewMatrix.Translate(-1.0, -1.0, 0.5);
+    viewMatrix.Scale(2.0f / float(aRect.width),
+                     2.0f / float(aRect.height),
+                     -4.0f / dimMax);
   } else {
-    viewMatrix.Translate(-1.0, 1.0);
-    viewMatrix.Scale(2.0f / float(aRect.width), 2.0f / float(aRect.height));
-    viewMatrix.Scale(1.0f, -1.0f);
+    viewMatrix.Translate(-1.0, 1.0, 0.5);
+    viewMatrix.Scale(2.0f / float(aRect.width),
+                     -2.0f / float(aRect.height),
+                     -4.0f / dimMax);
   }
 
-  viewMatrix = aWorldTransform * viewMatrix;
-  mProjMatrix = aProjection * Matrix4x4::From2D(viewMatrix);
+  viewMatrix = Matrix4x4::From2D(aWorldTransform) * viewMatrix;
+  mProjMatrix = viewMatrix * aProjection;
 
   UpdateTopRenderTargetStackViewport(aRect, aWorldTransform, aProjection);
 }
@@ -683,7 +690,7 @@ CompositorOGL::PushRenderTarget(CompositingRenderTarget* aRenderTarget)
   zeroZ._33 = 0.0f;
 
   PushRenderTarget(aRenderTarget,
-                   gfx::IntRect(gfx::IntPoint(0, 0), newRT->GetSize()),
+                   gfx::IntRect(gfx::IntPoint(0, 0), newRT->GetInitSize()),
                    gfx::Matrix(),
                    zeroZ);
 }
@@ -846,14 +853,14 @@ CompositorOGL::BeginFrame(const nsIntRegion& aInvalidRegion,
     origin.y = -mRenderOffset.y;
   }
 
-  mCurrentRenderTarget =
+  RefPtr<CompositingRenderTargetOGL> windowTarget =
     CompositingRenderTargetOGL::RenderTargetForWindow(this,
                                                       origin,
                                                       IntSize(width, height),
                                                       aTransform);
-  mCurrentRenderTarget->BindRenderTarget();
+  PushRenderTarget(windowTarget);
 #ifdef DEBUG
-  mWindowRenderTarget = mCurrentRenderTarget;
+  mWindowRenderTarget = windowTarget;
 #endif
 
   // Default blend function implements "OVER"
