@@ -83,10 +83,6 @@ public:
     return Translate(aPoint.x, aPoint.y);
   }
 
-  Matrix &Translate(const Point& aP) {
-    return Translate(aP.x, aP.y);
-  }
-
   Matrix &PostTranslate(Float aX, Float aY)
   {
     _31 += aX;
@@ -490,6 +486,8 @@ public:
 
     // Translate back into position after applying this matrix
     PostTranslate(aX, aY, aZ);
+
+    return *this;
   }
 
   Matrix4x4& Transpose() {

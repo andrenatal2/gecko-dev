@@ -684,17 +684,16 @@ RenderIntermediate(ContainerT* aContainer,
                    RefPtr<CompositingRenderTarget> surface)
 {
   Compositor* compositor = aManager->GetCompositor();
-  RefPtr<CompositingRenderTarget> previousTarget = compositor->GetCurrentRenderTarget();
 
   if (!surface) {
     return;
   }
 
-  compositor->SetRenderTarget(surface);
+  compositor->PushRenderTarget(surface);
   // pre-render all of the layers into our temporary
   RenderLayers(aContainer, aManager, aClipRect);
   // Unbind the current surface and rebind the previous one.
-  compositor->SetRenderTarget(previousTarget);
+  compositor->PopRenderTarget();
 }
 
 template<class ContainerT> void
@@ -704,7 +703,7 @@ ContainerRender(ContainerT* aContainer,
 {
   MOZ_ASSERT(aContainer->mPrepared);
 
-  gfx::vr::HMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
+  gfx::VRHMDInfo *hmdInfo = aContainer->GetVRHMDInfo();
   if (hmdInfo && hmdInfo->GetConfiguration().IsValid()) {
     ContainerRenderVR(aContainer, aManager, aClipRect, hmdInfo);
     aContainer->mPrepared = nullptr;

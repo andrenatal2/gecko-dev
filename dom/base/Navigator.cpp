@@ -1757,7 +1757,7 @@ Navigator::GetVRDevices(ErrorResult& aRv)
   }
 
   nsCOMPtr<nsIGlobalObject> go = do_QueryInterface(mWindow);
-  nsRefPtr<Promise> p = new Promise(go);
+  nsRefPtr<Promise> p = Promise::Create(go, aRv);
 
   nsGlobalWindow* win = static_cast<nsGlobalWindow*>(mWindow.get());
   nsRefPtr<mozilla::dom::VRDeviceService> vrService = win->GetVRDeviceService();
