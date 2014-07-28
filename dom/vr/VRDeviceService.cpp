@@ -13,7 +13,6 @@
 #include "nsAutoPtr.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMDocument.h"
-#include "GeneratedEvents.h"
 #include "nsIDOMWindow.h"
 #include "nsIObserver.h"
 #include "nsIObserverService.h"
