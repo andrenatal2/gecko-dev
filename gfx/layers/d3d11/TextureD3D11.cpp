@@ -490,7 +490,7 @@ DataTextureSourceD3D11::Update(DataSourceSurface* aSurface,
 
         void* data = map.mData + map.mStride * iterRect->y + BytesPerPixel(aSurface->GetFormat()) * iterRect->x;
 
-        mCompositor->GetDC()->UpdateSubresource(mTexture, 0, &box, data, map.mStride, map.mStride * mSize.height);
+        mCompositor->GetDC()->UpdateSubresource(mTexture, 0, &box, data, map.mStride, map.mStride * iterRect->height);
       }
     } else {
       mCompositor->GetDC()->UpdateSubresource(mTexture, 0, nullptr, aSurface->GetData(),
