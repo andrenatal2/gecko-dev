@@ -10,7 +10,7 @@ DeprecatedPremultiplyTables.h: $(srcdir)/genTables.py
 	$(PYTHON) $(srcdir)/genTables.py
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-ifdef HAVE_64BIT_OS
+ifdef HAVE_64BIT_BUILD
 libs::
 	cp -fp "$(srcdir)/libovr64.dll" "$(DIST)/bin"
 endif
