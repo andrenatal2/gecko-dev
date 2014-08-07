@@ -53,7 +53,7 @@ static pfn_ovrMatrix4f_OrthoSubProjection ovrMatrix4f_OrthoSubProjection = nullp
 static pfn_ovr_GetTimeInSeconds ovr_GetTimeInSeconds = nullptr;
 
 #if defined(XP_WIN)
-# ifdef HAVE_64BIT_OS
+# ifdef HAVE_64BIT_BUILD
 #  define OVR_LIB_NAME "libovr64.dll"
 # else
 #  define OVR_LIB_NAME "libovr.dll"
