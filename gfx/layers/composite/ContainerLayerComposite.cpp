@@ -497,6 +497,7 @@ ContainerPrepare(ContainerT* aContainer,
     // XXX fix this; we can win with the same optimizations.  Specifically, we
     // want to render thebes layers only once and then composite the intermeidate surfaces
     // with different transforms twice.
+    printf_stderr("%p ContainerPrepare with HMD, skipping\n", aContainer);
     return;
   }
 
@@ -644,6 +645,10 @@ CreateTemporaryTarget(ContainerT* aContainer,
 {
   Compositor* compositor = aManager->GetCompositor();
   nsIntRect visibleRect = aContainer->GetEffectiveVisibleRegion().GetBounds();
+  if (visibleRect.IsEmpty()) {
+    return nullptr;
+  }
+
   SurfaceInitMode mode = INIT_MODE_CLEAR;
   gfx::IntRect surfaceRect = gfx::IntRect(visibleRect.x, visibleRect.y,
                                           visibleRect.width, visibleRect.height);
