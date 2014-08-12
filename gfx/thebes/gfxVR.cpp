@@ -31,12 +31,12 @@ static pfn_ovrHmd_Create ovrHmd_Create = nullptr;
 static pfn_ovrHmd_Destroy ovrHmd_Destroy = nullptr;
 static pfn_ovrHmd_CreateDebug ovrHmd_CreateDebug = nullptr;
 static pfn_ovrHmd_GetLastError ovrHmd_GetLastError = nullptr;
-static pfn_ovrHmd_StartSensor ovrHmd_StartSensor = nullptr;
-static pfn_ovrHmd_StopSensor ovrHmd_StopSensor = nullptr;
-static pfn_ovrHmd_ResetSensor ovrHmd_ResetSensor = nullptr;
-static pfn_ovrHmd_GetSensorState ovrHmd_GetSensorState = nullptr;
-static pfn_ovrHmd_GetSensorDesc ovrHmd_GetSensorDesc = nullptr;
-static pfn_ovrHmd_GetDesc ovrHmd_GetDesc = nullptr;
+static pfn_ovrHmd_AttachToWindow ovrHmd_AttachToWindow = nullptr;
+static pfn_ovrHmd_GetEnabledCaps ovrHmd_GetEnabledCaps = nullptr;
+static pfn_ovrHmd_SetEnabledCaps ovrHmd_SetEnabledCaps = nullptr;
+static pfn_ovrHmd_ConfigureTracking ovrHmd_ConfigureTracking = nullptr;
+static pfn_ovrHmd_RecenterPose ovrHmd_RecenterPose = nullptr;
+static pfn_ovrHmd_GetTrackingState ovrHmd_GetTrackingState = nullptr;
 static pfn_ovrHmd_GetFovTextureSize ovrHmd_GetFovTextureSize = nullptr;
 static pfn_ovrHmd_GetRenderDesc ovrHmd_GetRenderDesc = nullptr;
 static pfn_ovrHmd_CreateDistortionMesh ovrHmd_CreateDistortionMesh = nullptr;
@@ -128,12 +128,13 @@ InitializeOculusCAPI()
   REQUIRE_FUNCTION(ovrHmd_Destroy);
   REQUIRE_FUNCTION(ovrHmd_CreateDebug);
   REQUIRE_FUNCTION(ovrHmd_GetLastError);
-  REQUIRE_FUNCTION(ovrHmd_StartSensor);
-  REQUIRE_FUNCTION(ovrHmd_StopSensor);
-  REQUIRE_FUNCTION(ovrHmd_ResetSensor);
-  REQUIRE_FUNCTION(ovrHmd_GetSensorState);
-  REQUIRE_FUNCTION(ovrHmd_GetSensorDesc);
-  REQUIRE_FUNCTION(ovrHmd_GetDesc);
+  REQUIRE_FUNCTION(ovrHmd_AttachToWindow);
+  REQUIRE_FUNCTION(ovrHmd_GetEnabledCaps);
+  REQUIRE_FUNCTION(ovrHmd_SetEnabledCaps);
+  REQUIRE_FUNCTION(ovrHmd_ConfigureTracking);
+  REQUIRE_FUNCTION(ovrHmd_RecenterPose);
+  REQUIRE_FUNCTION(ovrHmd_GetTrackingState);
+
   REQUIRE_FUNCTION(ovrHmd_GetFovTextureSize);
   REQUIRE_FUNCTION(ovrHmd_GetRenderDesc);
   REQUIRE_FUNCTION(ovrHmd_CreateDistortionMesh);
@@ -183,6 +184,7 @@ public:
   bool StartSensorTracking() MOZ_OVERRIDE;
   VRHMDSensorState GetSensorState(double timeOffset) MOZ_OVERRIDE;
   void StopSensorTracking() MOZ_OVERRIDE;
+  void ZeroSensor() MOZ_OVERRIDE;
 
   void FillDistortionConstants(uint32_t whichEye,
                                const IntSize& textureSize, const IntRect& eyeViewport,
@@ -224,28 +226,31 @@ HMDInfoOculus::HMDInfoOculus(ovrHmd aHMD)
   , mHMD(aHMD)
   , mStartCount(0)
 {
-  ovrHmdDesc desc;
-  ovrHmd_GetDesc(aHMD, &desc);
-
   mSupportedSensorBits = 0;
-  if (desc.SensorCaps & ovrSensorCap_Orientation)
+  if (mHMD->TrackingCaps & ovrTrackingCap_Orientation)
     mSupportedSensorBits |= State_Orientation;
-  if (desc.SensorCaps & ovrSensorCap_Position)
+  if (mHMD->TrackingCaps & ovrTrackingCap_Position)
     mSupportedSensorBits |= State_Position;
 
-  mRecommendedEyeFOV[Eye_Left] = FromFovPort(desc.DefaultEyeFov[ovrEye_Left]);
-  mRecommendedEyeFOV[Eye_Right] = FromFovPort(desc.DefaultEyeFov[ovrEye_Right]);
+  mRecommendedEyeFOV[Eye_Left] = FromFovPort(mHMD->DefaultEyeFov[ovrEye_Left]);
+  mRecommendedEyeFOV[Eye_Right] = FromFovPort(mHMD->DefaultEyeFov[ovrEye_Right]);
 
-  mMaximumEyeFOV[Eye_Left] = FromFovPort(desc.MaxEyeFov[ovrEye_Left]);
-  mMaximumEyeFOV[Eye_Right] = FromFovPort(desc.MaxEyeFov[ovrEye_Right]);
+  mMaximumEyeFOV[Eye_Left] = FromFovPort(mHMD->MaxEyeFov[ovrEye_Left]);
+  mMaximumEyeFOV[Eye_Right] = FromFovPort(mHMD->MaxEyeFov[ovrEye_Right]);
 
   SetFOV(mRecommendedEyeFOV[Eye_Left], mRecommendedEyeFOV[Eye_Right]);
 
   nsCOMPtr<nsIScreenManager> screenmgr = do_GetService("@mozilla.org/gfx/screenmanager;1");
   if (screenmgr) {
-    screenmgr->ScreenForRect(desc.WindowsPos.x, desc.WindowsPos.y,
-                             desc.Resolution.w, desc.Resolution.h,
+#if 0
+    screenmgr->ScreenForRect(mHMD->WindowsPos.x, mHMD->WindowsPos.y,
+                             mHMD->Resolution.w, mHMD->Resolution.h,
                              getter_AddRefs(mScreen));
+#else
+    screenmgr->ScreenForRect(3840, 0,
+                             mHMD->Resolution.w, mHMD->Resolution.h,
+                             getter_AddRefs(mScreen));
+#endif
   }
 }
 
@@ -299,15 +304,15 @@ HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRi
     VRDistortionVertex *destv = mDistortionMesh[eye].mVertices.Elements();
     memset(destv, 0, mesh.VertexCount * sizeof(VRDistortionVertex));
     for (uint32_t i = 0; i < mesh.VertexCount; ++i) {
-      destv[i].pos[0] = srcv[i].Pos.x;
-      destv[i].pos[1] = srcv[i].Pos.y;
+      destv[i].pos[0] = srcv[i].ScreenPosNDC.x;
+      destv[i].pos[1] = srcv[i].ScreenPosNDC.y;
 
-      destv[i].texR[0] = srcv[i].TexR.x;
-      destv[i].texR[1] = srcv[i].TexR.y;
-      destv[i].texG[0] = srcv[i].TexG.x;
-      destv[i].texG[1] = srcv[i].TexG.y;
-      destv[i].texB[0] = srcv[i].TexB.x;
-      destv[i].texB[1] = srcv[i].TexB.y;
+      destv[i].texR[0] = srcv[i].TanEyeAnglesR.x;
+      destv[i].texR[1] = srcv[i].TanEyeAnglesR.y;
+      destv[i].texG[0] = srcv[i].TanEyeAnglesG.x;
+      destv[i].texG[1] = srcv[i].TanEyeAnglesG.y;
+      destv[i].texB[0] = srcv[i].TanEyeAnglesB.x;
+      destv[i].texB[1] = srcv[i].TanEyeAnglesB.y;
 
       destv[i].genericAttribs[0] = srcv[i].VignetteFactor;
       destv[i].genericAttribs[1] = srcv[i].TimeWarpFactor;
@@ -372,7 +377,7 @@ bool
 HMDInfoOculus::StartSensorTracking()
 {
   if (mStartCount == 0) {
-    bool ok = ovrHmd_StartSensor(mHMD, ovrSensorCap_Orientation | ovrSensorCap_Position, 0);
+    bool ok = ovrHmd_ConfigureTracking(mHMD, ovrTrackingCap_Orientation | ovrTrackingCap_Position, 0);
     if (!ok)
       return false;
   }
@@ -385,8 +390,14 @@ void
 HMDInfoOculus::StopSensorTracking()
 {
   if (--mStartCount == 0) {
-    ovrHmd_StopSensor(mHMD);
+    ovrHmd_ConfigureTracking(mHMD, 0, 0);
   }
+}
+
+void
+HMDInfoOculus::ZeroSensor()
+{
+  ovrHmd_RecenterPose(mHMD);
 }
 
 VRHMDSensorState
@@ -397,18 +408,18 @@ HMDInfoOculus::GetSensorState(double timeOffset)
 
   // XXX this is the wrong time base for timeOffset; we need to figure out how to synchronize
   // the Oculus time base and the browser one.
-  ovrSensorState state = ovrHmd_GetSensorState(mHMD, ovr_GetTimeInSeconds() + timeOffset);
-  ovrPoseStatef& pose(state.Predicted);
+  ovrTrackingState state = ovrHmd_GetTrackingState(mHMD, ovr_GetTimeInSeconds() + timeOffset);
+  ovrPoseStatef& pose(state.HeadPose);
 
   result.timestamp = pose.TimeInSeconds;
 
   if (state.StatusFlags & ovrStatus_OrientationTracked) {
     result.flags |= State_Orientation;
 
-    result.orientation[0] = pose.Pose.Orientation.x;
-    result.orientation[1] = pose.Pose.Orientation.y;
-    result.orientation[2] = pose.Pose.Orientation.z;
-    result.orientation[3] = pose.Pose.Orientation.w;
+    result.orientation[0] = pose.ThePose.Orientation.x;
+    result.orientation[1] = pose.ThePose.Orientation.y;
+    result.orientation[2] = pose.ThePose.Orientation.z;
+    result.orientation[3] = pose.ThePose.Orientation.w;
     
     result.angularVelocity[0] = pose.AngularVelocity.x;
     result.angularVelocity[1] = pose.AngularVelocity.y;
@@ -422,9 +433,9 @@ HMDInfoOculus::GetSensorState(double timeOffset)
   if (state.StatusFlags & ovrStatus_PositionTracked) {
     result.flags |= State_Position;
 
-    result.position[0] = pose.Pose.Position.x;
-    result.position[1] = pose.Pose.Position.y;
-    result.position[2] = pose.Pose.Position.z;
+    result.position[0] = pose.ThePose.Position.x;
+    result.position[1] = pose.ThePose.Position.y;
+    result.position[2] = pose.ThePose.Position.z;
     
     result.linearVelocity[0] = pose.LinearVelocity.x;
     result.linearVelocity[1] = pose.LinearVelocity.y;

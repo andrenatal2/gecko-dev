@@ -39,7 +39,7 @@ typedef struct {
 } ovrPosef;
 
 typedef struct {
-  ovrPosef Pose;
+  ovrPosef ThePose;
   ovrVector3f AngularVelocity;
   ovrVector3f LinearVelocity;
   ovrVector3f AngularAcceleration;
@@ -58,7 +58,6 @@ typedef enum {
   ovrHmd_None             = 0,    
   ovrHmd_DK1              = 3,
   ovrHmd_DKHD             = 4,
-  ovrHmd_CrystalCoveProto = 5,
   ovrHmd_DK2              = 6,
   ovrHmd_Other
 } ovrHmdType;
@@ -66,24 +65,32 @@ typedef enum {
 typedef enum {
   ovrHmdCap_Present           = 0x0001,
   ovrHmdCap_Available         = 0x0002,
-  ovrHmdCap_Orientation       = 0x0010,
+  ovrHmdCap_Captured          = 0x0004,
+  ovrHmdCap_ExtendDesktop     = 0x0008,
+  ovrHmdCap_DisplayOff        = 0x0040,
   ovrHmdCap_LowPersistence    = 0x0080,
-  ovrHmdCap_LatencyTest       = 0x0100,
   ovrHmdCap_DynamicPrediction = 0x0200,
   ovrHmdCap_NoVSync           = 0x1000,
-  ovrHmdCap_NoRestore         = 0x4000,
+  ovrHmdCap_NoMirrorToWindow  = 0x2000
 } ovrHmdCapBits;
 
-typedef enum {
-  ovrSensorCap_Orientation = 0x0010,
-  ovrSensorCap_YawCorrection = 0x0020,
-  ovrSensorCap_Position = 0x0040
-} ovrSensorCaps;
+typedef enum
+{
+  ovrTrackingCap_Orientation      = 0x0010,
+  ovrTrackingCap_MagYawCorrection = 0x0020,
+  ovrTrackingCap_Position         = 0x0040,
+  ovrTrackingCap_Idle             = 0x0100
+} ovrTrackingCaps;
 
 typedef enum {
   ovrDistortionCap_Chromatic = 0x01,
   ovrDistortionCap_TimeWarp  = 0x02,
-  ovrDistortionCap_Vignette  = 0x08
+  ovrDistortionCap_Vignette  = 0x08,
+  ovrDistortionCap_NoRestore = 0x10,
+  ovrDistortionCap_FlipInput = 0x20,
+  ovrDistortionCap_SRGB      = 0x40,
+  ovrDistortionCap_Overdrive = 0x80,
+  ovrDistortionCap_ProfileNoTimewarpSpinWaits = 0x10000
 } ovrDistortionCaps;
 
 typedef enum {
@@ -92,44 +99,62 @@ typedef enum {
   ovrEye_Count = 2
 } ovrEyeType;
 
-typedef struct ovrHmdStruct* ovrHmd;
-
 typedef struct ovrHmdDesc_ {
-  ovrHmd      Handle;
+  void* Handle;
   ovrHmdType  Type;
   const char* ProductName;    
   const char* Manufacturer;
+  short VendorId;
+  short ProductId;
+  char SerialNumber[24];
+  short FirmwareMajor;
+  short FirmwareMinor;
+  float CameraFrustumHFovInRadians;
+  float CameraFrustumVFovInRadians;
+  float CameraFrustumNearZInMeters;
+  float CameraFrustumFarZInMeters;
+
   unsigned int HmdCaps;
-  unsigned int SensorCaps;
+  unsigned int TrackingCaps;
   unsigned int DistortionCaps;
-  ovrSizei    Resolution;
-  ovrVector2i WindowsPos;     
+
   ovrFovPort  DefaultEyeFov[ovrEye_Count];
   ovrFovPort  MaxEyeFov[ovrEye_Count];
   ovrEyeType  EyeRenderOrder[ovrEye_Count];
+
+  ovrSizei    Resolution;
+  ovrVector2i WindowsPos;
+
   const char* DisplayDeviceName;
-  int        DisplayId;
+  int         DisplayId;
 } ovrHmdDesc;
+
+typedef const ovrHmdDesc* ovrHmd;
 
 typedef enum {
   ovrStatus_OrientationTracked    = 0x0001,
   ovrStatus_PositionTracked       = 0x0002,
+  ovrStatus_CameraPoseTracked     = 0x0004,
   ovrStatus_PositionConnected     = 0x0020,
   ovrStatus_HmdConnected          = 0x0080
 } ovrStatusBits;
 
-typedef struct ovrSensorState_ {
-  ovrPoseStatef  Predicted;
-  ovrPoseStatef  Recorded;
-  float          Temperature;    
-  unsigned int   StatusFlags;
-} ovrSensorState;
+typedef struct ovrSensorData_ {
+  ovrVector3f    Accelerometer;
+  ovrVector3f    Gyro;
+  ovrVector3f    Magnetometer;
+  float          Temperature;
+  float          TimeInSeconds;
+} ovrSensorData;
 
-typedef struct ovrSensorDesc_ {
-  short   VendorId;
-  short   ProductId;
-  char    SerialNumber[24];
-} ovrSensorDesc;
+
+typedef struct ovrTrackingState_ {
+  ovrPoseStatef HeadPose;
+  ovrPosef CameraPose;
+  ovrPosef LeveledCameraPose;
+  ovrSensorData RawSensorData;
+  unsigned int StatusFlags;
+} ovrTrackingState;
 
 typedef struct ovrFrameTiming_ {
   float DeltaSeconds;
@@ -149,12 +174,12 @@ typedef struct ovrEyeRenderDesc_ {
 } ovrEyeRenderDesc;
 
 typedef struct ovrDistortionVertex_ {
-  ovrVector2f Pos;
+  ovrVector2f ScreenPosNDC;
   float       TimeWarpFactor;
   float       VignetteFactor;
-  ovrVector2f TexR;
-  ovrVector2f TexG;
-  ovrVector2f TexB;    
+  ovrVector2f TanEyeAnglesR;
+  ovrVector2f TanEyeAnglesG;
+  ovrVector2f TanEyeAnglesB;    
 } ovrDistortionVertex;
 
 typedef struct ovrDistortionMesh_ {
@@ -171,12 +196,12 @@ typedef ovrHmd (*pfn_ovrHmd_Create)(int index);
 typedef void (*pfn_ovrHmd_Destroy)(ovrHmd hmd);
 typedef ovrHmd (*pfn_ovrHmd_CreateDebug)(ovrHmdType type);
 typedef const char* (*pfn_ovrHmd_GetLastError)(ovrHmd hmd);
-typedef ovrBool (*pfn_ovrHmd_StartSensor)(ovrHmd hmd, unsigned int supportedCaps, unsigned int requiredCaps);
-typedef void (*pfn_ovrHmd_StopSensor)(ovrHmd hmd);
-typedef void (*pfn_ovrHmd_ResetSensor)(ovrHmd hmd);
-typedef ovrSensorState (*pfn_ovrHmd_GetSensorState)(ovrHmd hmd, double absTime);
-typedef ovrBool (*pfn_ovrHmd_GetSensorDesc)(ovrHmd hmd, ovrSensorDesc* descOut);
-typedef void (*pfn_ovrHmd_GetDesc)(ovrHmd hmd, ovrHmdDesc* desc);
+typedef ovrBool (*pfn_ovrHmd_AttachToWindow)(ovrHmd hmd, void* window, const ovrRecti* destMirrorRect, const ovrRecti* sourceRenderTargetRect);
+typedef unsigned int (*pfn_ovrHmd_GetEnabledCaps)(ovrHmd hmd);
+typedef void (*pfn_ovrHmd_SetEnabledCaps)(ovrHmd hmd, unsigned int hmdCaps);
+typedef ovrBool (*pfn_ovrHmd_ConfigureTracking)(ovrHmd hmd, unsigned int supportedTrackingCaps, unsigned int requiredTrackingCaps); 
+typedef void (*pfn_ovrHmd_RecenterPose)(ovrHmd hmd);
+typedef ovrTrackingState (*pfn_ovrHmd_GetTrackingState)(ovrHmd hmd, double absTime);
 typedef ovrSizei (*pfn_ovrHmd_GetFovTextureSize)(ovrHmd hmd, ovrEyeType eye, ovrFovPort fov, float pixelsPerDisplayPixel);
 typedef ovrEyeRenderDesc (*pfn_ovrHmd_GetRenderDesc)(ovrHmd hmd, ovrEyeType eyeType, ovrFovPort fov);
 typedef ovrBool (*pfn_ovrHmd_CreateDistortionMesh)(ovrHmd hmd, ovrEyeType eyeType, ovrFovPort fov, unsigned int distortionCaps, ovrDistortionMesh *meshData);

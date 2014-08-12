@@ -166,6 +166,8 @@ public:
   virtual VRHMDSensorState GetSensorState(double timeOffset = 0.0) = 0;
   virtual void StopSensorTracking() = 0;
 
+  virtual void ZeroSensor() = 0;
+
   virtual void FillDistortionConstants(uint32_t whichEye,
                                        const IntSize& textureSize, // the full size of the texture
                                        const IntRect& eyeViewport, // the viewport within the texture for the current eye
