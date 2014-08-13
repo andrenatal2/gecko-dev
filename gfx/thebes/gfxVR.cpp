@@ -179,7 +179,8 @@ public:
   HMDInfoOculus(ovrHmd aHMD);
   virtual ~HMDInfoOculus() { Destroy(); }
 
-  bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight) MOZ_OVERRIDE;
+  bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight,
+              double zNear, double zFar) MOZ_OVERRIDE;
 
   bool StartSensorTracking() MOZ_OVERRIDE;
   VRHMDSensorState GetSensorState(double timeOffset) MOZ_OVERRIDE;
@@ -238,7 +239,7 @@ HMDInfoOculus::HMDInfoOculus(ovrHmd aHMD)
   mMaximumEyeFOV[Eye_Left] = FromFovPort(mHMD->MaxEyeFov[ovrEye_Left]);
   mMaximumEyeFOV[Eye_Right] = FromFovPort(mHMD->MaxEyeFov[ovrEye_Right]);
 
-  SetFOV(mRecommendedEyeFOV[Eye_Left], mRecommendedEyeFOV[Eye_Right]);
+  SetFOV(mRecommendedEyeFOV[Eye_Left], mRecommendedEyeFOV[Eye_Right], 0.01, 10000.0);
 
   nsCOMPtr<nsIScreenManager> screenmgr = do_GetService("@mozilla.org/gfx/screenmanager;1");
   if (screenmgr) {
@@ -264,7 +265,8 @@ HMDInfoOculus::Destroy()
 }
 
 bool
-HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight)
+HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight,
+                      double zNear, double zFar)
 {
   float pixelsPerDisplayPixel = 1.0;
   ovrSizei texSize[2];
@@ -279,17 +281,13 @@ HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRi
     ovrEyeRenderDesc renderDesc = ovrHmd_GetRenderDesc(mHMD, (ovrEyeType) eye, mFOVPort[eye]);
     mEyeTranslation[eye] = Point3D(renderDesc.ViewAdjust.x, renderDesc.ViewAdjust.y, renderDesc.ViewAdjust.z);
 
-    // We set near to epsilon and far to 1.0, and then we scale in the
-    // compositor's viewport transform.
-    // XXX The actual znear/zfar probably need to come from CSS, or we
-    // can even accept them as part of the SetFOV call on the VR HMD
-    // device, but I think we can do that scaling later.
-    ovrMatrix4f projMatrix = ovrMatrix4f_Projection(mFOVPort[eye], 0.0001f, 1.0f, false);
+    // note that we are using a right-handed coordinate system here, to match CSS
+    ovrMatrix4f projMatrix = ovrMatrix4f_Projection(mFOVPort[eye], zNear, zFar, true);
+
     // XXX this is gross, we really need better methods on Matrix4x4
     memcpy(&mEyeProjectionMatrix[eye], projMatrix.M, sizeof(ovrMatrix4f));
     mEyeProjectionMatrix[eye].Transpose();
 
-    // XXX need to do better here
     texSize[eye] = ovrHmd_GetFovTextureSize(mHMD, (ovrEyeType) eye, mFOVPort[eye], pixelsPerDisplayPixel);
 
     ovrDistortionMesh mesh;

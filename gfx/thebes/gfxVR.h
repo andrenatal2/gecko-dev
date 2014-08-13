@@ -150,7 +150,8 @@ public:
   const VRHMDConfiguration& GetConfiguration() const { return mConfiguration; }
 
   /* set the FOV for this HMD unit; this triggers a computation of all the remaining bits.  Returns false if it fails */
-  virtual bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight) = 0;
+  virtual bool SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRight,
+                      double zNear, double zFar) = 0;
   const VRFieldOfView& GetEyeFOV(uint32_t whichEye)  { return mEyeFOV[whichEye]; }
 
   /* Suggested resolution for rendering a single eye.

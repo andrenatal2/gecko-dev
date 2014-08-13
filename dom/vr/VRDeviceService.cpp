@@ -67,7 +67,8 @@ public:
   virtual ~HMDInfoVRDevice() { }
 
   virtual void SetFieldOfView(const dom::VRFieldOfView& aLeftFOV,
-                              const dom::VRFieldOfView& aRightFOV)
+                              const dom::VRFieldOfView& aRightFOV,
+                              double zNear, double zFar)
   {
     gfx::VRFieldOfView left = gfx::VRFieldOfView(aLeftFOV.mUpDegrees, aLeftFOV.mRightDegrees,
                                                  aLeftFOV.mDownDegrees, aLeftFOV.mLeftDegrees);
@@ -79,7 +80,7 @@ public:
     if (right.IsZero())
       right = mHMD->GetRecommendedEyeFOV(VRHMDInfo::Eye_Right);
 
-    mHMD->SetFOV(left, right);
+    mHMD->SetFOV(left, right, zNear, zFar);
   }
 
   virtual void GetEyeTranslation(VREye aEye, VRPoint3D& aTranslationOut) {
@@ -100,6 +101,17 @@ public:
 
   virtual void GetMaximumEyeFieldOfView(VREye aEye, VRFieldOfView& aFOV) {
     CopyFieldOfView(mHMD->GetMaximumEyeFOV(EyeToEye(aEye)), aFOV);
+  }
+
+  virtual void GetRecommendedEyeRenderRect(VREye aEye, VRRect& aRect) {
+    const IntSize& a(mHMD->SuggestedEyeResolution());
+
+    // XXX fixme x/y, don't assume horizontal split
+    aRect.mX = (aEye == VREye::Left) ? 0 : a.width;
+    aRect.mY = 0;
+
+    aRect.mWidth = a.width;
+    aRect.mHeight = a.height;
   }
 };
 

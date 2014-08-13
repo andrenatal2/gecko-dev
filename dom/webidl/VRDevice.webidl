@@ -21,6 +21,15 @@ dictionary VRPoint4D {
   double w = 0.0;
 };
 
+// We have DOMRect, but it's an interface?
+// Come on..
+dictionary VRRect {
+  double x = 0.0;
+  double y = 0.0;
+  double width = 0.0;
+  double height = 0.0;
+};
+
 dictionary VRFieldOfView {
   double upDegrees = 0.0;
   double rightDegrees = 0.0;
@@ -77,7 +86,16 @@ interface HMDVRDevice : VRDevice {
   VRFieldOfView getMaximumEyeFieldOfView(VREye whichEye);
 
   // set a field of view
-  void setFieldOfView(optional VRFieldOfView leftFOV, optional VRFieldOfView rightFOV);
+  void setFieldOfView(optional VRFieldOfView leftFOV,
+                      optional VRFieldOfView rightFOV,
+                      optional double zNear = 0.01,
+                      optional double zFar = 10000.0);
+
+  // return a recommended rect for this eye.  Only useful for Canvas rendering,
+  // the x/y coordinates will be the location in the canvas where this eye should
+  // begin, and the width/height are the dimensions.  Any canvas in the appropriate
+  // ratio will work.
+  VRRect getRecommendedEyeRenderRect(VREye whichEye);
 };
 
 [Pref="dom.vr.enabled"]

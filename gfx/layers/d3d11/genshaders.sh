@@ -5,7 +5,7 @@
 tempfile=tmpShaderHeader
 
 FXC_DEBUG_FLAGS=""
-#FXC_DEBUG_FLAGS="-Od -Zi -Fd shaders.pdb"
+FXC_DEBUG_FLAGS="-Od -Zi -Fd shaders.pdb"
 FXC_FLAGS="$FXC_DEBUG_FLAGS"
 
 makeShaderVS() {

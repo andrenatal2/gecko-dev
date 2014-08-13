@@ -76,10 +76,12 @@ public:
 
   virtual void GetEyeTranslation(VREye aEye, VRPoint3D& aTranslationOut) = 0;
 
-  virtual void SetFieldOfView(const VRFieldOfView& aLeftFOV, const VRFieldOfView& aRightFOV) = 0;
+  virtual void SetFieldOfView(const VRFieldOfView& aLeftFOV, const VRFieldOfView& aRightFOV,
+                              double zNear, double zFar) = 0;
   virtual void GetCurrentEyeFieldOfView(VREye aEye, VRFieldOfView& aFOV) = 0;
   virtual void GetRecommendedEyeFieldOfView(VREye aEye, VRFieldOfView& aFOV) = 0;
   virtual void GetMaximumEyeFieldOfView(VREye aEye, VRFieldOfView& aFOV) = 0;
+  virtual void GetRecommendedEyeRenderRect(VREye aEye, VRRect& aRect) = 0;
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 

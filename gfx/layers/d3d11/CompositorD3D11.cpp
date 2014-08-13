@@ -171,6 +171,12 @@ printf_rect(const char *s, const gfx::Rect& r)
 }
 
 static void
+printf_rect(const char *s, const gfx::IntRect& r)
+{
+  printf_stderr("%s: %d,%d %dx%d\n", s, r.x, r.y, r.width, r.height);
+}
+
+static void
 printf_matrix(const char *s, const gfx::Matrix4x4& m)
 {
   printf_stderr("%s:\n", s);
@@ -178,6 +184,16 @@ printf_matrix(const char *s, const gfx::Matrix4x4& m)
   printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._21, m._22, m._23, m._24);
   printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m._31, m._32, m._33, m._34);
   printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]]\n", m._41, m._42, m._43, m._44);
+}
+
+static void
+printf_matrix(const char *s, float* m)
+{
+  printf_stderr("%s:\n", s);
+  printf_stderr("[[ %10.8f %10.8f %10.8f %10.8f ]\n", m[0], m[1], m[2], m[3]);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m[4], m[5], m[6], m[7]);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]\n", m[8], m[9], m[10], m[11]);
+  printf_stderr(" [ %10.8f %10.8f %10.8f %10.8f ]]\n", m[12], m[13], m[14], m[15]);
 }
 
 bool
@@ -869,6 +885,13 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
 
   mPSConstants.layerOpacity[0] = aOpacity;
 
+#if 0
+  printf_stderr("DrawQuad: rect: [%f %f %f %f] origin: [%d %d]\n", aRect.x, aRect.y, aRect.width, aRect.height, origin.x, origin.y);
+  printf_matrix("layerTransform", aTransform);
+  printf_matrix("projection", &mVSConstants.projection[0][0]);
+  printf_stderr("----\n");
+#endif
+
   bool restoreBlendMode = false;
 
   MaskType maskType = MaskType::MaskNone;
@@ -1177,28 +1200,14 @@ CompositorD3D11::PrepareViewport3D(const gfx::IntRect& aRect,
 
   mContext->RSSetViewports(1, &viewport);
 
-  // This view matrix translates coordinates from 0..width and 0..height to
-  // -1..1 on the X axis, and -1..1 on the Y axis (flips the Y coordinate)
-  // XXX fix this depth hacking with a css property!
-  // We also fix the depth to be from max(width,height)/2..-max(width,height)/2 * 10
-  // This is totally arbitrary and we may as well just pick arbitrary values
-  float dimMax = std::max(aRect.width, aRect.height) * 10;
-  Matrix4x4 viewMatrix;
-  viewMatrix.Translate(-1.0, 1.0, 0.5);
-  viewMatrix.Scale(2.0f / float(aRect.width),
-                   -2.0f / float(aRect.height),
-                   -4.0f / dimMax);
+  // When we're doing a 3D viewport, the projection is defined entirely by
+  // the given projection matrix.  We don't try to scale the rect coordinates
+  // to fill the view, like the 2D viewport setup does.
 
-  //printf("PrepareViewport3D viewMatrix dimMax: %f\n", dimMax);
-  //printf_matrix("PrepareViewport3D viewMatrix", viewMatrix);
-  //if (!aWorldTransform.IsIdentity()) printf_matrix("PrepareViewport3D worldTransform", Matrix4x4::From2D(aWorldTransform));
-
-  viewMatrix = Matrix4x4::From2D(aWorldTransform) * viewMatrix;
-
-  //if (!aWorldTransform.IsIdentity()) printf_matrix("PrepareViewport3D viewMatrix(2)", viewMatrix);
-
+  Matrix4x4 viewMatrix = Matrix4x4::From2D(aWorldTransform);
   Matrix4x4 projection = viewMatrix * aProjection;
 
+  //printf_rect("PrepareViewport3D rect", aRect);
   //printf_matrix("PrepareViewport3D final projection", projection);
 
   memcpy(&mVSConstants.projection, &projection, sizeof(mVSConstants.projection));

@@ -2041,7 +2041,7 @@ PresShell::ResizeReflowIgnoreOverride(nscoord aWidth, nscoord aHeight)
   // If we're rendering with VR, then we will pretend to be half the width
   // XXX handle height-oriented displays too
   if (mVRRenderingEnabled) {
-    aWidth = aWidth / 2;
+    //aWidth = aWidth / 2;
   }
 
   mPresContext->SetVisibleArea(nsRect(0, 0, aWidth, aHeight));

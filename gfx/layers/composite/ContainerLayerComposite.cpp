@@ -315,7 +315,7 @@ ContainerRenderVR(ContainerT* aContainer,
   // a proper sized surface
 
   int32_t maxTextureSize = compositor->GetMaxTextureSize();
-  int32_t eyeWidth = surfaceRect.width;
+  int32_t eyeWidth = surfaceRect.width / 2;
   surfaceRect.width = std::min(maxTextureSize, eyeWidth * 2);
   surfaceRect.height = std::min(maxTextureSize, surfaceRect.height);
 
@@ -449,20 +449,21 @@ ContainerRenderVR(ContainerT* aContainer,
 
   compositor->PopRenderTarget();
 
-  gfx::Rect rect(visibleRect.x, visibleRect.y, visibleRect.width * 2, visibleRect.height);
-  gfx::Rect clipRect(aClipRect.x, aClipRect.y, aClipRect.width * 2, aClipRect.height);
+  //gfx::Rect rect(visibleRect.x, visibleRect.y, visibleRect.width * 2, visibleRect.height);
+  //gfx::Rect clipRect(aClipRect.x, aClipRect.y, aClipRect.width * 2, aClipRect.height);
+
+  gfx::Rect rect(visibleRect.x, visibleRect.y, visibleRect.width, visibleRect.height);
+  gfx::Rect clipRect(aClipRect.x, aClipRect.y, aClipRect.width, aClipRect.height);
 
   // The VR geometry may not cover the entire area; we need to fill with a solid color
   // first.
   // XXX should DrawQuad handle this on its own?  Is there a time where we wouldn't want
   // to do this? (e.g. something like Cardboard would not require distortion so will fill
   // the entire rect)
-#if 0
   EffectChain solidEffect(aContainer);
   solidEffect.mPrimaryEffect = new EffectSolidColor(Color(0.0, 0.0, 0.0, 1.0));
   aManager->GetCompositor()->DrawQuad(rect, clipRect, solidEffect, opacity,
                                       aContainer->GetEffectiveTransform());
-#endif
 
   // draw the temporary surface with VR distortion to the original destination
   EffectChain vrEffect(aContainer);
@@ -497,7 +498,6 @@ ContainerPrepare(ContainerT* aContainer,
     // XXX fix this; we can win with the same optimizations.  Specifically, we
     // want to render thebes layers only once and then composite the intermeidate surfaces
     // with different transforms twice.
-    printf_stderr("%p ContainerPrepare with HMD, skipping\n", aContainer);
     return;
   }
 
