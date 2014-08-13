@@ -103,6 +103,8 @@ public:
 
   virtual void GetState(double timeOffset, VRPositionState& aOut) = 0;
 
+  virtual void ZeroSensor() = 0;
+
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
 protected:

@@ -153,6 +153,10 @@ public:
     }
   }
 
+  void ZeroSensor() {
+    mHMD->ZeroSensor();
+  }
+
 protected:
   RefPtr<gfx::VRHMDInfo> mHMD;
 };

@@ -83,6 +83,9 @@ interface HMDVRDevice : VRDevice {
 [Pref="dom.vr.enabled"]
 interface PositionSensorVRDevice : VRDevice {
   VRPositionState getState(optional double timeOffset = 0.0);
+
+  // zero this sensor
+  void zeroSensor();
 };
 
 /* Testing temporary APIs */
