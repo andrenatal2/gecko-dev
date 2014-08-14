@@ -27,10 +27,6 @@ class VRDevice : public nsISupports,
                  public nsWrapperCache
 {
 public:
-  virtual ~VRDevice() {
-    Shutdown();
-  }
-
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(VRDevice)
 
@@ -61,6 +57,10 @@ protected:
     mDeviceName.AssignLiteral("unknown");
   }
 
+  virtual ~VRDevice() {
+    Shutdown();
+  }
+
   nsCOMPtr<nsISupports> mParent;
   nsString mHWID;
   nsString mDeviceId;
@@ -72,8 +72,6 @@ protected:
 class HMDVRDevice : public VRDevice
 {
 public:
-  virtual ~HMDVRDevice() { }
-
   virtual void GetEyeTranslation(VREye aEye, VRPoint3D& aTranslationOut) = 0;
 
   virtual void SetFieldOfView(const VRFieldOfView& aLeftFOV, const VRFieldOfView& aRightFOV,
@@ -95,14 +93,14 @@ protected:
     , mHMD(aHMD)
   { }
 
+  virtual ~HMDVRDevice() { }
+
   RefPtr<gfx::VRHMDInfo> mHMD;
 };
 
 class PositionSensorVRDevice : public VRDevice
 {
 public:
-  virtual ~PositionSensorVRDevice() { }
-
   virtual void GetState(double timeOffset, VRPositionState& aOut) = 0;
 
   virtual void ZeroSensor() = 0;
@@ -113,6 +111,8 @@ protected:
   PositionSensorVRDevice(nsISupports* aParent)
     : VRDevice(aParent)
   { }
+
+  virtual ~PositionSensorVRDevice() { }
 };
 
 } // namespace dom
