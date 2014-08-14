@@ -376,6 +376,8 @@ ContainerRenderVR(ContainerT* aContainer,
 
   nsIntRect eyeClipRect(0, 0, eyeWidth, surfaceRect.height);
   for (uint32_t eye = 0; eye < 2; ++eye) {
+    //printf_stderr("===== eye %d =====\n", eye);
+
     // set up the viewport for the proper rect for this eye.
     // XXX fix this for vertical displays
     // XXX There is no matrix.Translate that takes a Point?!?!?!
@@ -431,6 +433,7 @@ ContainerRenderVR(ContainerT* aContainer,
       if (gfxPrefs::UniformityInfo()) PrintUniformityInfo(layer);
       if (gfxPrefs::DrawLayerInfo()) DrawLayerInfo(clipRect, aManager, layer);
     }
+    //printf_stderr("=======\n");
   }
 
   // restore previous global transform
