@@ -11,9 +11,6 @@
 #include "mozilla/layers/Compositor.h"
 #include "TextureD3D11.h"
 #include <d3d11.h>
-#ifdef DEBUG
-#include <d3d11_1.h>
-#endif
 
 class nsWidget;
 
@@ -187,10 +184,6 @@ private:
   RefPtr<IDXGISwapChain> mSwapChain;
   RefPtr<CompositingRenderTargetD3D11> mDefaultRT;
   RefPtr<CompositingRenderTargetD3D11> mCurrentRT;
-
-#ifdef DEBUG
-  nsRefPtr<ID3DUserDefinedAnnotation> mDebugAnnotations;
-#endif
 
   DeviceAttachmentsD3D11* mAttachments;
 

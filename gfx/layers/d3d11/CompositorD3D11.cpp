@@ -90,34 +90,6 @@ struct DeviceAttachmentsD3D11
   uint32_t mVRDistortionIndexCount[2];
 };
 
-struct AutoBeginEndEvent {
-#ifdef DEBUG
-  AutoBeginEndEvent(ID3DUserDefinedAnnotation *anno, const char *fmt, ...)
-    : mDebug(anno)
-  {
-    va_list ap;
-    nsString str;
-
-    va_start(ap, fmt);
-    str.AppendPrintf(fmt, ap);
-    va_end(ap);
-
-    if (mDebug)
-      mDebug->BeginEvent(str.BeginReading());
-  }
-
-  ~AutoBeginEndEvent()
-  {
-    if (mDebug)
-      mDebug->EndEvent();
-  }
-
-  ID3DUserDefinedAnnotation *mDebug;
-#else
-  AutoBeginEndEvent(ID3DUserDefinedAnnotation *, const char *, ...) {}
-#endif
-};
-
 CompositorD3D11::CompositorD3D11(nsIWidget* aWidget)
   : mAttachments(nullptr)
   , mWidget(aWidget)
@@ -400,10 +372,6 @@ CompositorD3D11::Initialize()
 
   mDevice->QueryInterface(dxgiDevice.StartAssignment());
   dxgiDevice->GetAdapter(getter_AddRefs(dxgiAdapter));
-
-#ifdef DEBUG
-  mDevice->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), reinterpret_cast<void**>(mDebugAnnotations.StartAssignment()));
-#endif
 
 #ifdef MOZ_METRO
   if (IsRunningInWindowsMetro()) {
@@ -690,8 +658,6 @@ CompositorD3D11::SetPSForEffect(Effect* aEffect, MaskType aMaskType, gfx::Surfac
 void
 CompositorD3D11::ClearRect(const gfx::Rect& aRect)
 {
-  AutoBeginEndEvent event(mDebugAnnotations, "ClearRect");
-
   mContext->OMSetBlendState(mAttachments->mDisabledBlendState, sBlendFactor, 0xFFFFFFFF);
 
   Matrix4x4 identity;
@@ -731,8 +697,6 @@ CompositorD3D11::DrawVRDistortion(const gfx::Rect& aRect,
                                   gfx::Float aOpacity,
                                   const gfx::Matrix4x4& aTransform)
 {
-  AutoBeginEndEvent drawQuadEvent(mDebugAnnotations, "DrawVRDistortion");
-
   MOZ_ASSERT(aEffectChain.mPrimaryEffect->mType == EffectTypes::VR_DISTORTION);
 
   if (aEffectChain.mSecondaryEffects[EffectTypes::MASK] ||
@@ -874,8 +838,6 @@ CompositorD3D11::DrawQuad(const gfx::Rect& aRect,
     DrawVRDistortion(aRect, aClipRect, aEffectChain, aOpacity, aTransform);
     return;
   }
-
-  AutoBeginEndEvent drawQuadEvent(mDebugAnnotations, "DrawQuad");
 
   memcpy(&mVSConstants.layerTransform, &aTransform._11, 64);
   IntPoint origin = mCurrentRT->GetOrigin();
