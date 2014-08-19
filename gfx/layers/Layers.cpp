@@ -606,10 +606,11 @@ Layer::CalculateScissorRect(const nsIntRect& aCurrentScissorRect,
   NS_ASSERTION(container, "This can't be called on the root!");
 
   // Establish initial clip rect: it's either the one passed in, or
-  // if the parent has an intermediate surface, it's the extents of that surface.
+  // if the parent has an intermediate surface, it's the intersection of that size and
+  // the one passed in.
   nsIntRect currentClip;
   if (container->UseIntermediateSurface()) {
-    currentClip.SizeTo(container->GetIntermediateSurfaceRect().Size());
+    currentClip = aCurrentScissorRect.Intersect(container->GetIntermediateSurfaceRect());
   } else {
     currentClip = aCurrentScissorRect;
   }

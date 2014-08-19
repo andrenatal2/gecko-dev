@@ -411,6 +411,12 @@ ContainerRenderVR(ContainerT* aContainer,
         continue;
       }
 
+      if (!(contentFlags & Layer::CONTENT_PRESERVE_3D) ||
+          contentFlags & Layer::CONTENT_NATIVE_VR)
+      {
+        continue;
+      }
+
       // XXX this is not the right calculation I don't think.  The manager world transform
       // should not be relevant here if we're going to apply a VR distortion.
       nsIntRect clipRect = layer->
@@ -420,13 +426,6 @@ ContainerRenderVR(ContainerT* aContainer,
       }
 
       layerToRender->Prepare(clipRect);
-
-      if (!(contentFlags & Layer::CONTENT_PRESERVE_3D) ||
-          contentFlags & Layer::CONTENT_NATIVE_VR)
-      {
-        continue;
-      }
-
       layerToRender->RenderLayer(clipRect);
 
       if (gfxPrefs::LayersScrollGraph()) DrawVelGraph(clipRect, aManager, layer);

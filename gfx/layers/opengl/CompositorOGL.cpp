@@ -1134,8 +1134,26 @@ CompositorOGL::DrawQuad(const Rect& aRect,
     return;
   }
 
+#if 0
+  {
+    printf_stderr("DrawQuad: r: %f,%f,%f,%f cr: %f,%f,%f,%f target: %p mro: %d,%d\n",
+                  aRect.x, aRect.y, aRect.width, aRect.height,
+                  aClipRect.x, aClipRect.y, aClipRect.width, aClipRect.height,
+                  mTarget.get(),
+                  mRenderOffset.x, mRenderOffset.y);
+  }
+#endif
+
   IntRect intClipRect;
   aClipRect.ToIntRect(&intClipRect);
+
+  // XXX add the current viewport's origin to the clip rect, because the clip is going
+  // to be in the wrong coordinate space otherwise.
+  // XXX how is this ever correct otherwise?  Do we ever set a non-0,0 viewport?
+  // XXX we never set a non-0,0 viewport.  The only things that set a viewport are in
+  // this file, or the PrepareViewport3D for VR in ContainerLayerComposite.
+  intClipRect.MoveBy(mRenderTargetStack.LastElement().mRect.x,
+                     mRenderTargetStack.LastElement().mRect.y);
   if (!mTarget) {
     intClipRect.MoveBy(mRenderOffset.x, mRenderOffset.y);
   }
