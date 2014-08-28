@@ -286,7 +286,10 @@ HMDInfoOculus::SetFOV(const VRFieldOfView& aFOVLeft, const VRFieldOfView& aFOVRi
     mFOVPort[eye] = ToFovPort(mEyeFOV[eye]);
 
     ovrEyeRenderDesc renderDesc = ovrHmd_GetRenderDesc(mHMD, (ovrEyeType) eye, mFOVPort[eye]);
-    mEyeTranslation[eye] = Point3D(renderDesc.ViewAdjust.x, renderDesc.ViewAdjust.y, renderDesc.ViewAdjust.z);
+
+    // these values are negated so that content can add the adjustment to its camera position,
+    // instead of subtracting
+    mEyeTranslation[eye] = Point3D(-renderDesc.ViewAdjust.x, -renderDesc.ViewAdjust.y, -renderDesc.ViewAdjust.z);
 
     // note that we are using a right-handed coordinate system here, to match CSS
     ovrMatrix4f projMatrix = ovrMatrix4f_Projection(mFOVPort[eye], zNear, zFar, true);
