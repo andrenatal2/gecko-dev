@@ -8,84 +8,135 @@
 
 #include "mozilla/dom/SpeechGrammarListBinding.h"
 #include "mozilla/ErrorResult.h"
+#include "nsCOMPtr.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
+#include "nsXPCOMStrings.h"
+#include "nsISpeechRecognitionService.h"
 
 namespace mozilla {
-namespace dom {
+  namespace dom {
 
-NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(SpeechGrammarList, mParent)
-NS_IMPL_CYCLE_COLLECTING_ADDREF(SpeechGrammarList)
-NS_IMPL_CYCLE_COLLECTING_RELEASE(SpeechGrammarList)
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(SpeechGrammarList)
-  NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-NS_INTERFACE_MAP_END
+    #define PREFERENCE_DEFAULT_RECOGNITION_SERVICE "media.webspeech.service.default"
+    #define DEFAULT_RECOGNITION_SERVICE "pocketsphinx"
 
-SpeechGrammarList::SpeechGrammarList(nsISupports* aParent)
-  : mParent(aParent)
-{
-  SetIsDOMBinding();
-}
+    NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(SpeechGrammarList, mParent)
+    NS_IMPL_CYCLE_COLLECTING_ADDREF(SpeechGrammarList)
+    NS_IMPL_CYCLE_COLLECTING_RELEASE(SpeechGrammarList)
+    NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(SpeechGrammarList)
+      NS_WRAPPERCACHE_INTERFACE_MAP_ENTRY
+      NS_INTERFACE_MAP_ENTRY(nsISupports)
+    NS_INTERFACE_MAP_END
 
-SpeechGrammarList::~SpeechGrammarList()
-{
-}
+    SpeechGrammarList::SpeechGrammarList(nsISupports* aParent)
+      : mParent(aParent)
+    {
 
-SpeechGrammarList*
-SpeechGrammarList::Constructor(const GlobalObject& aGlobal,
-                               ErrorResult& aRv)
-{
-  return new SpeechGrammarList(aGlobal.GetAsSupports());
-}
+      nsAutoCString speechRecognitionServiceCID;
+      nsresult rv;
+      nsAdoptingCString prefValue =
+        Preferences::GetCString(PREFERENCE_DEFAULT_RECOGNITION_SERVICE);
+      nsAutoCString speechRecognitionService;
+      if (!prefValue.get() || prefValue.IsEmpty()) {
+        speechRecognitionService = DEFAULT_RECOGNITION_SERVICE;
+      } else {
+        speechRecognitionService = prefValue;
+      }
+      speechRecognitionServiceCID =
+        NS_LITERAL_CSTRING(NS_SPEECH_RECOGNITION_SERVICE_CONTRACTID_PREFIX) +
+        speechRecognitionService;
 
-JSObject*
-SpeechGrammarList::WrapObject(JSContext* aCx)
-{
-  return SpeechGrammarListBinding::Wrap(aCx, this);
-}
+      nsCOMPtr<nsISpeechRecognitionService> mRecognitionService;
+      mRecognitionService = do_GetService(speechRecognitionServiceCID.get(), &rv);
+      NS_ENSURE_SUCCESS_VOID(rv);
 
-nsISupports*
-SpeechGrammarList::GetParentObject() const
-{
-  return mParent;
-}
+      SetIsDOMBinding();
+    }
 
-uint32_t
-SpeechGrammarList::Length() const
-{
-  return 0;
-}
+    SpeechGrammarList::~SpeechGrammarList()
+    {
+    }
 
-already_AddRefed<SpeechGrammar>
-SpeechGrammarList::Item(uint32_t aIndex, ErrorResult& aRv)
-{
-  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-  return nullptr;
-}
+    SpeechGrammarList*
+    SpeechGrammarList::Constructor(const GlobalObject& aGlobal,
+                                   ErrorResult& aRv)
+    {
 
-void
-SpeechGrammarList::AddFromURI(const nsAString& aSrc,
-                              const Optional<float>& aWeight,
-                              ErrorResult& aRv)
-{
-  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-  return;
-}
+      return new SpeechGrammarList(aGlobal.GetAsSupports());
+    }
 
-void
-SpeechGrammarList::AddFromString(const nsAString& aString,
-                                 const Optional<float>& aWeight,
-                                 ErrorResult& aRv)
-{
-  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-  return;
-}
+    JSObject*
+    SpeechGrammarList::WrapObject(JSContext* aCx)
+    {
+      return SpeechGrammarListBinding::Wrap(aCx, this);
+    }
 
-already_AddRefed<SpeechGrammar>
-SpeechGrammarList::IndexedGetter(uint32_t aIndex, bool& aPresent,
-                                 ErrorResult& aRv)
-{
-  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-  return nullptr;
-}
-} // namespace dom
+    nsISupports*
+    SpeechGrammarList::GetParentObject() const
+    {
+      return mParent;
+    }
+
+    uint32_t
+    SpeechGrammarList::Length() const
+    {
+      return 0;
+    }
+
+    already_AddRefed<SpeechGrammar>
+    SpeechGrammarList::Item(uint32_t aIndex, ErrorResult& aRv)
+    {
+      aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
+      return nullptr;
+    }
+
+    void
+    SpeechGrammarList::AddFromURI(const nsAString& aSrc,
+                                  const Optional<float>& aWeight,
+                                  ErrorResult& aRv)
+    {
+      aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
+      return;
+    }
+
+    void SpeechGrammarList::AddFromString(const nsAString& aString,
+                                     const Optional<float>& aWeight,
+                                     ErrorResult& aRv)
+    {
+        mGram = ToNewUTF8String(aString);
+
+        nsAutoCString speechRecognitionServiceCID;
+        nsresult rv;
+        nsAdoptingCString prefValue =
+          Preferences::GetCString(PREFERENCE_DEFAULT_RECOGNITION_SERVICE);
+        nsAutoCString speechRecognitionService;
+        if (!prefValue.get() || prefValue.IsEmpty()) {
+          speechRecognitionService = DEFAULT_RECOGNITION_SERVICE;
+        } else {
+          speechRecognitionService = prefValue;
+        }
+        speechRecognitionServiceCID =
+          NS_LITERAL_CSTRING(NS_SPEECH_RECOGNITION_SERVICE_CONTRACTID_PREFIX) +
+          speechRecognitionService;
+
+        nsCOMPtr<nsISpeechRecognitionService> mRecognitionService;
+        mRecognitionService = do_GetService(speechRecognitionServiceCID.get(), &rv);
+        mRecognitionService->SetGrammarList(this);
+        NS_ENSURE_SUCCESS_VOID(rv);
+
+        return;
+    }
+
+    already_AddRefed<SpeechGrammar>
+    SpeechGrammarList::IndexedGetter(uint32_t aIndex, bool& aPresent,
+                                     ErrorResult& aRv)
+    {
+      aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
+      return nullptr;
+    }
+
+
+
+
+  } // namespace dom
 } // namespace mozilla

@@ -11,8 +11,12 @@
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsWrapperCache.h"
+#include "nsWeakReference.h"
+#include "mozilla/WeakPtr.h"
 
 struct JSContext;
+
+class nsIDOMWindow;
 
 namespace mozilla {
 
@@ -24,16 +28,19 @@ class GlobalObject;
 class SpeechGrammar;
 template<typename> class Optional;
 
-class SpeechGrammarList MOZ_FINAL : public nsISupports,
+class SpeechGrammarList MOZ_FINAL : public nsSupportsWeakReference,
+                                    public SupportsWeakPtr<SpeechGrammarList>,
                                     public nsWrapperCache
 {
 public:
+  MOZ_DECLARE_REFCOUNTED_TYPENAME(SpeechGrammarList)
+
   SpeechGrammarList(nsISupports* aParent);
 
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS(SpeechGrammarList)
 
-  SpeechGrammarList* Constructor(const GlobalObject& aGlobal,
+  static SpeechGrammarList* Constructor(const GlobalObject& aGlobal,
                                  ErrorResult& aRv);
 
   nsISupports* GetParentObject() const;
@@ -49,6 +56,8 @@ public:
   void AddFromString(const nsAString& aString, const Optional<float>& aWeight, ErrorResult& aRv);
 
   already_AddRefed<SpeechGrammar> IndexedGetter(uint32_t aIndex, bool& aPresent, ErrorResult& aRv);
+
+  const char * mGram;
 
 private:
   ~SpeechGrammarList();
